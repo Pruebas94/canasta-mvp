@@ -239,47 +239,38 @@ def _mejor_combinacion(products, target, qty_user=1):
         # Sin candidatos de la categoría: fallback al más barato global
         return min(enriched, key=lambda x: x["price"]), "no_match"
 
-    # Para cada producto, calcular la combinación óptima
+    # Para cada producto, calcular qué necesito comprar para cubrir el target
     options = []
     for p in candidates:
         size = p["base_value"]
+        # Mínimo de unidades para cubrir >= target_total
         units = max(1, math.ceil(target_total / size))
         total_price = round(units * p["price"], 2)
         total_size = units * size
-        coverage = total_size / target_total  # 1.0 = exacto, >1 = sobra
-
-        # Penalizar si sobra demasiado (más de 50%)
-        if coverage > 1.5:
-            penalty = (coverage - 1) * 0.1  # 10% peor por cada 100% extra
-        else:
-            penalty = 0
+        leftover = total_size - target_total  # cuánto sobra
 
         options.append({
             **p,
             "units_needed": units,
             "combo_price": total_price,
             "combo_size": total_size,
-            "coverage": round(coverage, 2),
-            "score": total_price * (1 + penalty),
+            "leftover": leftover,
         })
 
-    # Ordenar por score (precio efectivo penalizando sobras)
-    options.sort(key=lambda x: x["score"])
+    # Ordenar ÚNICAMENTE por precio total (lo que pagas)
+    options.sort(key=lambda x: x["combo_price"])
     best = options[0]
 
     # Crear copia con campos del combo
     result = dict(best)
-    result["price"] = best["combo_price"]  # precio del combo es el precio que pagas
+    result["price"] = best["combo_price"]      # lo que pagas
     result["precio_unitario"] = best["price"]  # precio por una unidad del producto
     result["combo_units"] = best["units_needed"]
     result["combo_size_label"] = f'{best["units_needed"]}× {best.get("size_label", "")}'.strip()
 
+    # Warning solo si comprás varias unidades del mismo producto (info útil)
     warning = None
-    if best["coverage"] < 0.95:
-        warning = "less"
-    elif best["coverage"] > 1.3:
-        warning = "more"
-    elif best["units_needed"] > 1:
+    if best["units_needed"] > 1:
         warning = "multiple"
 
     return result, warning

@@ -1669,9 +1669,7 @@
                     const isBest = s === d.mejor_precio?.supermarket;
                     const warning = d.warnings?.[s];
                     const warningLabel =
-                      warning === 'less' ? 'Less than asked' :
-                      warning === 'more' ? 'More than asked' :
-                      warning === 'multiple' ? `Buy ${p.combo_units}×` :
+                      warning === 'multiple' ? `Buy ${p.combo_units}× units` :
                       warning === 'no_match' ? 'Different category' : null;
                     return `
                       <td style="padding:10px 8px;text-align:right;${isBest ? 'background:#FAF0E0' : ''}">
