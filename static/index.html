@@ -30,7 +30,7 @@
     /* Home */
     .hero { text-align: center; padding: 32px 16px 24px; }
     .hero .logo-pin { font-size: 52px; }
-    .hero h2 { font-size: 22px; font-weight: 700; margin: 12px 0 8px; color: #1A1A1A; }
+    .hero h2 { font-size: 22px; font-weight: 400; margin: 12px 0 8px; color: #1A1A1A; font-family: Georgia, serif; letter-spacing: 0.5px; }
     .hero p { color: #888; font-size: 15px; }
 
     .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: all 0.15s; }
@@ -153,8 +153,11 @@
 <body>
 
 <header>
-  <span style="font-size:20px">📍</span>
-  <h1>Foocation</h1>
+  <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 1C7.373 1 2 6.373 2 13c0 9 12 22 12 22S26 22 26 13C26 6.373 20.627 1 14 1Z" stroke="#F5F0EA" stroke-width="2" fill="none"/>
+    <circle cx="14" cy="13" r="4" fill="#C9A96E"/>
+  </svg>
+  <h1 style="font-family: Georgia, serif; font-weight: 400; letter-spacing: 1px;">Foocation</h1>
   <span id="header-list-name" class="header-list-name" style="display:none"></span>
   <button class="lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
 </header>
@@ -164,7 +167,12 @@
   <!-- HOME -->
   <div id="screen-home" class="screen active">
     <div class="hero">
-      <div class="logo-pin">📍</div>
+      <div class="logo-pin">
+        <svg width="64" height="80" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 1C7.373 1 2 6.373 2 13c0 9 12 22 12 22S26 22 26 13C26 6.373 20.627 1 14 1Z" stroke="#1A1A1A" stroke-width="2" fill="none"/>
+          <circle cx="14" cy="13" r="4" fill="#C9A96E"/>
+        </svg>
+      </div>
       <h2 data-i18n="heroTitle">Compara precios al instante</h2>
       <p data-i18n="heroSub">Crea una lista compartida y encuentra la canasta más barata.</p>
     </div>
