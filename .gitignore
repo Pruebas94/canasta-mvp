@@ -4,3 +4,4 @@ __pycache__/
 .env
 *.json
 !package.json
+!static/productos.json

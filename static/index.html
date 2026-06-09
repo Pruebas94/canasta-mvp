@@ -66,6 +66,14 @@
     .add-item-row input:focus { border-color: #2ecc71; }
     .qty-input { width: 56px !important; flex: none !important; text-align: center; font-weight: 700; }
     .add-item-row button.add-btn { background: #2ecc71; color: white; border: none; border-radius: 12px; padding: 12px 18px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+    /* Autocomplete */
+    .autocomplete-wrap { position: relative; flex: 1; }
+    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; max-height: 260px; overflow-y: auto; margin-top: 4px; border: 1px solid #e0e0e0; }
+    .autocomplete-item { padding: 11px 14px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f5f5f5; }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover, .autocomplete-item.active { background: #f0fdf4; }
+    .autocomplete-item .item-cat { font-size: 11px; color: #aaa; margin-left: auto; }
+    .autocomplete-item mark { background: none; color: #2ecc71; font-weight: 700; }
 
     .empty-msg { text-align: center; padding: 20px; color: #bbb; font-size: 14px; list-style: none; }
 
@@ -183,7 +191,13 @@
     <div class="card">
       <h2 id="lista-card-title">Lista de compras</h2>
       <div class="add-item-row">
-        <input id="input-producto" type="text" placeholder="ej: leche entera, pan, huevos..." />
+        <div class="autocomplete-wrap">
+          <input id="input-producto" type="text" placeholder="ej: leche entera, pan, huevos..."
+            autocomplete="off"
+            oninput="onProductoInput(this.value)"
+            onkeydown="onProductoKeydown(event)" />
+          <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
+        </div>
         <input id="input-cantidad" class="qty-input" type="number" value="1" min="1" max="99" />
         <button class="add-btn" onclick="agregarItem()">+</button>
       </div>
@@ -337,6 +351,91 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+
+  // ── Autocomplete ─────────────────────────────────────
+  let todosProductos = [];
+  let acIndex = -1;
+
+  fetch('/static/productos.json')
+    .then(r => r.json())
+    .then(data => { todosProductos = data; });
+
+  window.onProductoInput = (val) => {
+    acIndex = -1;
+    const list = document.getElementById('autocomplete-list');
+    if (!val || val.length < 2) { list.style.display = 'none'; return; }
+
+    const q = val.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const matches = todosProductos
+      .filter(p => {
+        const name = p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        return name.includes(q);
+      })
+      .sort((a, b) => {
+        const na = a.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const nb = b.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        // Priorizar los que empiezan por la búsqueda
+        return (na.startsWith(q) ? 0 : 1) - (nb.startsWith(q) ? 0 : 1) || na.length - nb.length;
+      })
+      .slice(0, 8);
+
+    if (!matches.length) { list.style.display = 'none'; return; }
+
+    list.innerHTML = matches.map((p, i) => {
+      const highlighted = p.name.replace(
+        new RegExp(val.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+        m => `<mark>${m}</mark>`
+      );
+      return `<div class="autocomplete-item" data-name="${p.name}"
+        onmousedown="seleccionarSugerencia('${p.name.replace(/'/g,"\\'")}')">
+        <span>🛒</span>
+        <span>${highlighted}</span>
+        <span class="item-cat">${p.category || ''}</span>
+      </div>`;
+    }).join('');
+
+    list.style.display = 'block';
+  };
+
+  window.seleccionarSugerencia = (nombre) => {
+    document.getElementById('input-producto').value = nombre;
+    document.getElementById('autocomplete-list').style.display = 'none';
+    document.getElementById('input-cantidad').focus();
+  };
+
+  window.onProductoKeydown = (e) => {
+    const list = document.getElementById('autocomplete-list');
+    const items = list.querySelectorAll('.autocomplete-item');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      acIndex = Math.min(acIndex + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+      if (acIndex >= 0) document.getElementById('input-producto').value = items[acIndex].dataset.name;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      acIndex = Math.max(acIndex - 1, -1);
+      items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+    } else if (e.key === 'Escape') {
+      list.style.display = 'none';
+    } else if (e.key === 'Enter') {
+      if (acIndex >= 0 && list.style.display !== 'none') {
+        e.preventDefault();
+        seleccionarSugerencia(items[acIndex].dataset.name);
+      } else {
+        list.style.display = 'none';
+        agregarItem();
+      }
+    }
+  };
+
+  // Cerrar al hacer click fuera
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.autocomplete-wrap')) {
+      document.getElementById('autocomplete-list').style.display = 'none';
+    }
+  });
 
   // ── Estado ────────────────────────────────────────────
   let listaId = null;
