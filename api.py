@@ -12,6 +12,7 @@ import os
 from scrapers import mercadona, dia, eroski, ahorramas
 from scrapers.distancias import buscar_supermercados_cercanos
 from scrapers.traducciones import traducir
+from scrapers.precio_unitario import calcular_precio_unitario
 
 app = FastAPI(title="Canasta MVP")
 
@@ -134,6 +135,12 @@ async def comparar(request: SearchRequest):
                     p_copy["precio_unitario"] = p["price"]
                     p_copy["cantidad"] = qty
                     p_copy["price"] = round(p["price"] * qty, 2)
+                    # Calcular precio por litro/kg
+                    unit_info = calcular_precio_unitario(p["price"], p["name"])
+                    if unit_info:
+                        p_copy["size_label"] = unit_info["size_label"]
+                        p_copy["unit_price"] = unit_info["unit_price"]
+                        p_copy["unit_label"] = unit_info["unit_label"]
                     por_super[s] = p_copy
 
         resultado[item] = {

@@ -466,6 +466,10 @@
       <div id="savings-summary" style="background:#FAF6F0;border-radius:12px;padding:12px;margin-bottom:12px">
         ${savingsHTML}
       </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Recent purchases</div>
+        <div id="history-list"><div style="color:#bbb;font-size:12px;text-align:center;padding:8px">Loading...</div></div>
+      </div>
       <button onclick="doSignOut()" style="width:100%;padding:10px;background:#F0EBE3;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#1A1A1A">
         ${T[lang].signOut}
       </button>
@@ -473,9 +477,12 @@
 
     document.body.appendChild(modal);
 
-    // Cargar ahorro real desde Firebase
+    // Cargar ahorro + historial desde Firebase
     if (currentUser) {
-      onValue(ref(db, `users/${currentUser.uid}/savings`), snap => {
+      const uid = currentUser.uid;
+
+      // Ahorro total
+      onValue(ref(db, `users/${uid}/savings`), snap => {
         const data = snap.val();
         const summaryEl = document.getElementById('savings-summary');
         if (!summaryEl) return;
@@ -483,13 +490,43 @@
           summaryEl.innerHTML = `
             <div style="text-align:center">
               <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${T[lang].totalSaved}</div>
-              <div style="font-size:28px;font-weight:800;color:#C9A96E">${data.total?.toFixed(2) || '0.00'}€</div>
+              <div style="font-size:32px;font-weight:800;color:#C9A96E">${data.total?.toFixed(2) || '0.00'}€</div>
               <div style="font-size:12px;color:#aaa;margin-top:2px">${data.count || 0} ${T[lang].purchases}</div>
             </div>
           `;
         } else {
           summaryEl.innerHTML = `<div style="color:#bbb;font-size:13px;text-align:center;padding:4px 0">No savings yet 🛒</div>`;
         }
+      }, { onlyOnce: true });
+
+      // Historial de compras
+      onValue(ref(db, `users/${uid}/history`), snap => {
+        const histEl = document.getElementById('history-list');
+        if (!histEl) return;
+        const data = snap.val();
+        if (!data) {
+          histEl.innerHTML = `<div style="color:#bbb;font-size:12px;text-align:center;padding:8px 0">No history yet</div>`;
+          return;
+        }
+        // Últimas 5 compras
+        const entries = Object.values(data)
+          .sort((a, b) => b.date - a.date)
+          .slice(0, 5);
+
+        histEl.innerHTML = entries.map(e => {
+          const date = new Date(e.date).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+          const items = (e.items || []).slice(0, 3).join(', ');
+          const more = (e.items || []).length > 3 ? ` +${e.items.length - 3}` : '';
+          return `
+            <div style="padding:8px 0;border-bottom:1px solid #F5F0EA;font-size:13px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:#888">${date}</span>
+                <span style="color:#C9A96E;font-weight:700">-${e.saved?.toFixed(2)}€</span>
+              </div>
+              <div style="color:#555;margin-top:2px">${items}${more}</div>
+              <div style="font-size:11px;color:#aaa">@ ${e.supermarket} · total ${e.total?.toFixed(2)}€</div>
+            </div>`;
+        }).join('');
       }, { onlyOnce: true });
     }
 
@@ -510,21 +547,36 @@
   };
 
   // Guardar ahorro cada vez que se compara
-  async function guardarAhorro(totalMasBarato, totalMasCaro) {
+  async function guardarAhorro(totalMasBarato, totalMasCaro, itemsData) {
     if (!currentUser) return;
     const ahorro = totalMasCaro - totalMasBarato;
     if (ahorro <= 0) return;
 
-    const savingsRef = ref(db, `users/${currentUser.uid}/savings`);
+    const uid = currentUser.uid;
+
+    // Guardar ahorro total
+    const savingsRef = ref(db, `users/${uid}/savings`);
     onValue(savingsRef, snap => {
       const data = snap.val() || { total: 0, count: 0 };
       set(savingsRef, {
-        total: (data.total || 0) + ahorro,
+        total: round2((data.total || 0) + ahorro),
         count: (data.count || 0) + 1,
         lastSaved: Date.now(),
       });
     }, { onlyOnce: true });
+
+    // Guardar historial de compras
+    const histRef = ref(db, `users/${uid}/history`);
+    push(histRef, {
+      date: Date.now(),
+      items: Object.keys(itemsData),
+      supermarket: Object.values(itemsData)[0]?.mejor_precio?.supermarket || '',
+      saved: round2(ahorro),
+      total: round2(totalMasBarato),
+    });
   }
+
+  function round2(n) { return Math.round(n * 100) / 100; }
 
   // ── Autocomplete ─────────────────────────────────────
   let todosProductos = [];
@@ -981,7 +1033,7 @@
       // Guardar ahorro si hay usuario logueado
       if (result.totales && Object.keys(result.totales).length > 1) {
         const vals = Object.values(result.totales);
-        guardarAhorro(Math.min(...vals), Math.max(...vals));
+        guardarAhorro(Math.min(...vals), Math.max(...vals), result.items);
       }
     } catch(e) {
       alert('Error al comparar. Intenta de nuevo.');
@@ -1028,7 +1080,10 @@
           ${list.map(([s, p]) => `
             <div class="precio-row ${s === mejor?.supermarket ? 'mejor' : ''}">
               <span class="super">${s}</span>
-              <span class="prod-name">${p.name}</span>
+              <div style="flex:1;overflow:hidden">
+                <div class="prod-name">${p.name}</div>
+                ${p.size_label ? `<div style="font-size:11px;color:#C9A96E;font-weight:600">${p.size_label} · ${p.unit_price}${p.unit_label}</div>` : ''}
+              </div>
               <span class="precio">
                 ${p.price.toFixed(2)}€
                 ${qty > 1 ? `<span style="font-size:11px;color:#aaa;font-weight:400"> (${p.precio_unitario?.toFixed(2)}€ c/u)</span>` : ''}
