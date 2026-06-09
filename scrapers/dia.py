@@ -48,11 +48,11 @@ def search(query: str) -> list:
                 # Validar que el producto coincide con la búsqueda
                 if not _name_matches(name, query_words):
                     continue
-                # Detectar promoción: precio tachado, badge oferta, 3x2, etc.
-                card_text = card.get_text().lower()
-                has_strike = bool(card.select_one("del, s, [class*=strike], [class*=old-price], [class*=before]"))
-                has_promo_word = any(w in card_text for w in ["oferta", "ahorra", "3x2", "2x1", "descuento", "-%", "rebaj"])
-                on_sale = has_strike or has_promo_word
+                # DIA: el div .product-special-offer existe siempre, pero solo
+                # tiene texto cuando hay oferta REAL.
+                offer_el = card.select_one(".product-special-offer")
+                promo_text = offer_el.get_text(strip=True)[:60] if offer_el else None
+                on_sale = bool(promo_text)  # solo True si hay texto real
 
                 seen.add(name)
                 results.append({
@@ -61,6 +61,7 @@ def search(query: str) -> list:
                     "price": float(price_match.group(1).replace(",", ".")),
                     "unit": "ud",
                     "on_sale": on_sale,
+                    "promo_text": promo_text,
                 })
     except Exception as e:
         print(f"DIA error: {e}")
