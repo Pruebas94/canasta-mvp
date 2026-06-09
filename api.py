@@ -10,6 +10,7 @@ import uuid
 import os
 
 from scrapers import mercadona, dia, eroski, ahorramas
+from scrapers.distancias import buscar_supermercados_cercanos
 
 app = FastAPI(title="Canasta MVP")
 
@@ -60,6 +61,14 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.get("/supermercados-cercanos")
+async def supermercados_cercanos(lat: float, lon: float):
+    loop = asyncio.get_event_loop()
+    resultados = await loop.run_in_executor(
+        executor, buscar_supermercados_cercanos, lat, lon
+    )
+    return {"supermercados": resultados}
 
 # ── LISTAS COLABORATIVAS ─────────────────────────────────
 

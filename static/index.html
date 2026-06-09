@@ -107,6 +107,27 @@
     .precio-row.mejor .precio { color: #2ecc71; }
     .tag-mejor { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
 
+    /* Supermercados cercanos */
+    .cercanos-header { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .super-cercano { background: white; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .super-cercano-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .super-cercano-top .nombre { font-size: 16px; font-weight: 700; flex: 1; }
+    .dist-badge { background: #f0fdf4; color: #16a34a; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .super-cercano-dir { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+    .super-cercano-tiempos { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .tiempo-chip { background: #f5f5f5; border-radius: 20px; padding: 4px 10px; font-size: 12px; color: #555; }
+    .delivery-opciones { border-top: 1px solid #f5f5f5; padding-top: 10px; }
+    .delivery-opciones h4 { font-size: 12px; color: #aaa; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+    .delivery-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; gap: 8px; }
+    .delivery-row:last-child { border-bottom: none; }
+    .delivery-row .plat-name { flex: 1; font-weight: 500; }
+    .delivery-row .plat-tiempo { color: #888; font-size: 13px; }
+    .delivery-row .plat-tarifa { font-weight: 700; color: #1a1a1a; }
+    .delivery-row .plat-tarifa.gratis { color: #2ecc71; }
+    .delivery-row .plat-nota { font-size: 11px; color: #aaa; }
+    .ubicacion-btn { background: #eff6ff; color: #3b82f6; border: none; border-radius: 12px; padding: 12px; width: 100%; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+    .ubicacion-btn:hover { background: #dbeafe; }
+
     .loading { text-align: center; padding: 28px; color: #888; }
     .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #2ecc71; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -178,7 +199,13 @@
     <button id="btn-comparar" class="btn btn-primary" onclick="comparar()" disabled>
       Comparar precios →
     </button>
+    <button id="btn-distancia" class="btn btn-secondary" onclick="buscarCercanos()" disabled>
+      📍 Ver supermercados cercanos
+    </button>
     <button class="btn btn-secondary" onclick="volverHome()">← Volver</button>
+
+    <!-- Supermercados cercanos -->
+    <div id="cercanos-container" style="display:none"></div>
 
     <div id="loading" style="display:none" class="card">
       <div class="loading">
@@ -442,6 +469,8 @@
       </li>
     `).join('');
     btn.disabled = false;
+    const btnDist = document.getElementById('btn-distancia');
+    if (btnDist) btnDist.disabled = false;
   }
 
   // ── ITEMS ─────────────────────────────────────────────
@@ -500,6 +529,100 @@
       setTimeout(() => btn.textContent = 'Copiar link', 2000);
     });
   };
+
+  // ── DISTANCIAS ────────────────────────────────────────
+
+  window.buscarCercanos = () => {
+    const container = document.getElementById('cercanos-container');
+    container.style.display = 'block';
+    container.innerHTML = `
+      <button class="ubicacion-btn" onclick="obtenerUbicacion()">
+        📍 Usar mi ubicación actual
+      </button>`;
+    container.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  window.obtenerUbicacion = () => {
+    const container = document.getElementById('cercanos-container');
+    if (!navigator.geolocation) {
+      container.innerHTML = '<p style="color:#aaa;text-align:center;padding:16px">Tu navegador no soporta geolocalización.</p>';
+      return;
+    }
+    container.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div><p>Obteniendo tu ubicación...</p></div></div>`;
+    navigator.geolocation.getCurrentPosition(
+      pos => cargarSupermercadosCercanos(pos.coords.latitude, pos.coords.longitude),
+      err => {
+        container.innerHTML = `<div class="card" style="text-align:center;color:#aaa;padding:20px">
+          <p>No se pudo obtener la ubicación.</p>
+          <p style="font-size:12px;margin-top:6px">Asegúrate de permitir el acceso.</p>
+        </div>`;
+      }
+    );
+  };
+
+  async function cargarSupermercadosCercanos(lat, lon) {
+    const container = document.getElementById('cercanos-container');
+    container.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div><p>Buscando supermercados cercanos...</p></div></div>`;
+    try {
+      const res = await fetch(`/supermercados-cercanos?lat=${lat}&lon=${lon}`);
+      const data = await res.json();
+      renderCercanos(data.supermercados, lat, lon);
+    } catch(e) {
+      container.innerHTML = '<div class="card"><p style="color:#aaa;text-align:center">Error buscando supermercados.</p></div>';
+    }
+  }
+
+  function renderCercanos(supermercados, userLat, userLon) {
+    const container = document.getElementById('cercanos-container');
+    if (!supermercados.length) {
+      container.innerHTML = '<div class="card"><p style="color:#aaa;text-align:center;padding:16px">No se encontraron supermercados en 3km.</p></div>';
+      return;
+    }
+
+    const mapsUrl = (lat, lon) => `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
+
+    container.innerHTML = `
+      <p class="cercanos-header">📍 Supermercados cercanos a ti</p>
+      ${supermercados.map((s, i) => `
+        <div class="super-cercano">
+          <div class="super-cercano-top">
+            <span style="font-size:22px">${getEmoji(s.nombre)}</span>
+            <span class="nombre">${s.nombre}</span>
+            <span class="dist-badge">${s.distancia_texto}</span>
+          </div>
+          <div class="super-cercano-dir">📌 ${s.direccion.join(', ')}</div>
+          <div class="super-cercano-tiempos">
+            <span class="tiempo-chip">🚶 ${s.tiempo_andando}</span>
+            <span class="tiempo-chip">🚗 ${s.tiempo_coche}</span>
+            <a href="${mapsUrl(s.lat, s.lon)}" target="_blank" style="text-decoration:none">
+              <span class="tiempo-chip" style="color:#3b82f6">🗺 Ver en mapa</span>
+            </a>
+          </div>
+          <div class="delivery-opciones">
+            <h4>Opciones de entrega</h4>
+            ${s.delivery.map(d => `
+              <div class="delivery-row">
+                <span>${d.emoji}</span>
+                <span class="plat-name">${d.plataforma}</span>
+                <span class="plat-tiempo">${d.tiempo_estimado}</span>
+                <span class="plat-tarifa ${d.tarifa === 0 ? 'gratis' : ''}">
+                  ${d.tarifa === 0 ? 'Gratis*' : d.tarifa.toFixed(2) + '€'}
+                </span>
+              </div>
+              ${d.nota ? `<div class="plat-nota" style="padding:2px 0 6px 28px">${d.nota}</div>` : ''}
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <p style="font-size:11px;color:#bbb;text-align:center;margin-top:8px">
+        * Tiempos y tarifas de delivery son estimados. Distancias vía OpenStreetMap.
+      </p>`;
+  }
+
+  function getEmoji(nombre) {
+    const emojis = { Mercadona: '🟢', DIA: '🔴', Eroski: '🔵', Ahorramas: '🟠', Carrefour: '🔷', Lidl: '🟡', Aldi: '⬛', Alcampo: '🟣' };
+    return emojis[nombre] || '🏪';
+  }
 
   // ── COMPARADOR ────────────────────────────────────────
   window.comparar = async () => {
