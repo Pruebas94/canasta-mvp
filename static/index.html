@@ -167,15 +167,15 @@
 <body>
 
 <header>
-  <div onclick="volverHome()" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1">
+  <div onclick="volverHome()" style="display:flex;align-items:center;gap:10px;cursor:pointer">
     <svg width="24" height="32" viewBox="0 0 40 52" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20 2C10.059 2 2 10.059 2 20c0 13.5 18 30 18 30S38 33.5 38 20C38 10.059 29.941 2 20 2Z" stroke="#F5F0EA" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
       <circle cx="20" cy="19" r="5.5" fill="#C9A96E"/>
     </svg>
-    <h1 style="font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: 1px;">Foocation</h1>
+    <h1 style="font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: 1px;flex:none">Foocation</h1>
   </div>
   <span id="header-list-name" class="header-list-name" style="display:none"></span>
-  <div id="auth-btn" onclick="handleAuth()" style="cursor:pointer;display:flex;align-items:center;gap:8px;background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:20px;padding:5px 12px;">
+  <div id="auth-btn" onclick="handleAuth()" style="cursor:pointer;display:flex;align-items:center;gap:8px;background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:20px;padding:5px 12px;margin-left:auto">
     <span id="auth-avatar" style="display:none;width:22px;height:22px;border-radius:50%;overflow:hidden">
       <img id="auth-photo" style="width:100%;height:100%;object-fit:cover" />
     </span>
