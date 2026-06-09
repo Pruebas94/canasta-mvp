@@ -613,16 +613,31 @@
         el.innerHTML = `<div style="color:#bbb;font-size:13px;text-align:center;padding:8px">Buy more to learn your patterns</div>`;
         return;
       }
-      el.innerHTML = Object.values(data).map(p => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F5F0EA">
-          <div>
-            <div style="font-weight:600;font-size:14px;text-transform:capitalize">${p.nombreDisplay}</div>
-            <div style="font-size:12px;color:#888">Usually every ${p.frecuenciaDias} days · ${p.nCompras} purchases</div>
+      el.innerHTML = Object.values(data).map(p => {
+        const stockBar = p.stockRestante !== null && p.cantidadTipica
+          ? Math.min((p.stockRestante / p.cantidadTipica) * 100, 100) : null;
+        return `
+        <div style="padding:10px 0;border-bottom:1px solid #F5F0EA">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-weight:600;font-size:14px;text-transform:capitalize">${p.nombreDisplay}</span>
+            ${p.tocaComprar
+              ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">🛒 Buy now!</span>`
+              : p.diasParaAgotar !== null
+                ? `<span style="font-size:12px;color:#aaa">${p.diasParaAgotar}d of stock left</span>`
+                : `<span style="font-size:12px;color:#aaa">${p.frecuenciaDias ? p.frecuenciaDias - p.diasDesde + 'd left' : '–'}</span>`}
           </div>
-          ${p.tocaComprar
-            ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">🛒 Buy now!</span>`
-            : `<span style="font-size:12px;color:#aaa">${p.frecuenciaDias - p.diasDesde}d left</span>`}
-        </div>`).join('');
+          <div style="font-size:12px;color:#888;margin-bottom:4px">
+            ${p.frecuenciaDias ? `Buys every ~${p.frecuenciaDias} days` : ''}
+            ${p.cantidadTipica ? ` · ~${p.cantidadTipica} units/purchase` : ''}
+            · ${p.nCompras} purchase${p.nCompras > 1 ? 's' : ''}
+            ${p.aprendiendo ? `<span style="color:#C9A96E"> · still learning (${3 - p.nCompras} more needed)</span>` : ''}
+          </div>
+          ${stockBar !== null ? `
+          <div style="background:#F5F0EA;border-radius:20px;height:5px;overflow:hidden">
+            <div style="background:${stockBar < 20 ? '#C9A96E' : '#D4C9B8'};height:100%;width:${stockBar}%;border-radius:20px;transition:width 0.5s"></div>
+          </div>` : ''}
+        </div>`;
+      }).join('');
     }, { onlyOnce: true });
   }
 
@@ -717,38 +732,71 @@
     const data = snap.val();
     if (!data) return;
 
-    const smartRef = ref(db, `users/${uid}/smartPatterns`);
     const patterns = {};
 
-    for (const [producto, compras] of Object.entries(data)) {
-      const fechas = Object.values(compras)
-        .map(c => c.fecha)
-        .sort((a, b) => a - b);
+    for (const [producto, comprasObj] of Object.entries(data)) {
+      const compras = Object.values(comprasObj).sort((a, b) => a.fecha - b.fecha);
+      if (compras.length < 1) continue;
 
-      if (fechas.length < 2) continue; // necesitamos al menos 2 compras
-
-      // Calcular intervalo promedio entre compras
-      const intervalos = [];
-      for (let i = 1; i < fechas.length; i++) {
-        intervalos.push(fechas[i] - fechas[i - 1]);
+      // ── Frecuencia: promedio de intervalos entre compras ──
+      let avgDias = null;
+      if (compras.length >= 2) {
+        const intervalos = [];
+        for (let i = 1; i < compras.length; i++) {
+          intervalos.push((compras[i].fecha - compras[i-1].fecha) / 86400000);
+        }
+        // Weighted average: compras más recientes pesan más
+        let sumPeso = 0, sumVal = 0;
+        intervalos.forEach((v, i) => {
+          const peso = i + 1; // más reciente = mayor peso
+          sumVal += v * peso;
+          sumPeso += peso;
+        });
+        avgDias = Math.round(sumVal / sumPeso);
       }
-      const avgMs = intervalos.reduce((a, b) => a + b, 0) / intervalos.length;
-      const avgDias = Math.round(avgMs / 86400000);
-      const ultimaCompra = fechas[fechas.length - 1];
-      const diasDesde = Math.round((Date.now() - ultimaCompra) / 86400000);
-      const tocaComprar = diasDesde >= avgDias;
+
+      // ── Cantidad típica: promedio ponderado de cantidades ──
+      let cantidadTipica = null;
+      const cantidades = compras.map(c => c.cantidad).filter(Boolean);
+      if (cantidades.length > 0) {
+        let sumPeso = 0, sumVal = 0;
+        cantidades.forEach((v, i) => {
+          const peso = i + 1;
+          sumVal += v * peso;
+          sumPeso += peso;
+        });
+        cantidadTipica = Math.round((sumVal / sumPeso) * 10) / 10;
+      }
+
+      // ── Stock restante ──
+      const ultimaCompra = compras[compras.length - 1];
+      const diasDesde = (Date.now() - ultimaCompra.fecha) / 86400000;
+      let stockRestante = null;
+      let diasParaAgotar = null;
+
+      if (cantidadTipica && avgDias) {
+        const consumoDiario = cantidadTipica / avgDias;
+        stockRestante = Math.max(0, (ultimaCompra.cantidad || cantidadTipica) - consumoDiario * diasDesde);
+        diasParaAgotar = consumoDiario > 0 ? Math.floor(stockRestante / consumoDiario) : null;
+      }
+
+      const tocaComprar = avgDias ? diasDesde >= avgDias : false;
 
       patterns[producto] = {
         nombreDisplay: producto.replace(/_/g, ' '),
         frecuenciaDias: avgDias,
-        ultimaCompra,
-        diasDesde,
-        tocaComprar,
-        nCompras: fechas.length,
+        cantidadTipica,
+        ultimaCompra: ultimaCompra.fecha,
+        diasDesde: Math.round(diasDesde),
+        stockRestante: stockRestante !== null ? Math.round(stockRestante * 10) / 10 : null,
+        diasParaAgotar,
+        tocaComprar: tocaComprar || (diasParaAgotar !== null && diasParaAgotar <= 0),
+        nCompras: compras.length,
+        aprendiendo: compras.length < 3, // avisa que aún está aprendiendo
       };
     }
 
-    await set(smartRef, patterns);
+    await set(ref(db, `users/${uid}/smartPatterns`), patterns);
   }
 
   window.toggleSmartLearning = async () => {
