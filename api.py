@@ -13,6 +13,7 @@ from scrapers import mercadona, dia, eroski, ahorramas
 from scrapers.distancias import buscar_supermercados_cercanos
 from scrapers.traducciones import traducir
 from scrapers.precio_unitario import calcular_precio_unitario
+from scrapers.ubicacion import reverse_geocode, supermercados_disponibles
 
 app = FastAPI(title="Canasta MVP")
 
@@ -39,6 +40,7 @@ class SearchRequest(BaseModel):
     items: list[str]
     cantidades: dict = {}
     sizes: dict = {}
+    state: str | None = None  # CCAA del usuario para filtrar regionales
 
 class CrearListaRequest(BaseModel):
     nombre: str
@@ -130,6 +132,17 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.get("/ubicacion")
+async def ubicacion(lat: float, lon: float):
+    """Obtiene CP, ciudad y supermercados disponibles desde lat/lon"""
+    loop = asyncio.get_event_loop()
+    info = await loop.run_in_executor(executor, reverse_geocode, lat, lon)
+    if info.get("error"):
+        return info
+    supers = supermercados_disponibles(info.get("state"), info.get("city"))
+    return {**info, **supers}
+
 
 @app.get("/supermercados-cercanos")
 async def supermercados_cercanos(lat: float, lon: float):
@@ -280,16 +293,29 @@ async def comparar(request: SearchRequest):
     loop = asyncio.get_event_loop()
     resultado = {}
 
+    # Filtrar supermercados según ubicación
+    disponibles = set(supermercados_disponibles(request.state)["available"])
+    excluded = []
+
     for item in request.items:
         item_es = traducir(item)
         target_size = _parse_target_size(request.sizes.get(item))
 
-        futures = [
-            loop.run_in_executor(executor, mercadona.search, item_es),
-            loop.run_in_executor(executor, dia.search, item_es),
-            loop.run_in_executor(executor, eroski.search, item_es),
-            loop.run_in_executor(executor, ahorramas.search, item_es),
-        ]
+        scrapers_a_usar = []
+        if "Mercadona" in disponibles:
+            scrapers_a_usar.append(("Mercadona", mercadona))
+        else: excluded.append("Mercadona")
+        if "DIA" in disponibles:
+            scrapers_a_usar.append(("DIA", dia))
+        else: excluded.append("DIA")
+        if "Eroski" in disponibles:
+            scrapers_a_usar.append(("Eroski", eroski))
+        elif "Eroski" not in excluded: excluded.append("Eroski")
+        if "Ahorramas" in disponibles:
+            scrapers_a_usar.append(("Ahorramas", ahorramas))
+        elif "Ahorramas" not in excluded: excluded.append("Ahorramas")
+
+        futures = [loop.run_in_executor(executor, mod.search, item_es) for _, mod in scrapers_a_usar]
         all_results = await asyncio.gather(*futures)
 
         qty = request.cantidades.get(item, 1)
@@ -339,4 +365,5 @@ async def comparar(request: SearchRequest):
         "items": resultado,
         "totales": totales,
         "mejor_canasta": min(totales, key=totales.get) if totales else None,
+        "excluded_supers": list(set(excluded)),
     }

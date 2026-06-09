@@ -175,6 +175,9 @@
     <h1 style="font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: 1px;flex:none">Foocation</h1>
   </div>
   <span id="header-list-name" class="header-list-name" style="display:none"></span>
+  <button id="loc-btn" onclick="cambiarUbicacion()" style="display:none;background:rgba(245,240,234,0.1);border:1px solid rgba(245,240,234,0.2);color:#F5F0EA;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;margin-right:8px" title="Click to change">
+    📍 <span id="loc-label">Set location</span>
+  </button>
   <div id="auth-btn" onclick="handleAuth()" style="cursor:pointer;display:flex;align-items:center;gap:8px;background:rgba(201,169,110,0.15);border:1px solid rgba(201,169,110,0.3);border-radius:20px;padding:5px 12px;margin-left:auto">
     <span id="auth-avatar" style="display:none;width:22px;height:22px;border-radius:50%;overflow:hidden">
       <img id="auth-photo" style="width:100%;height:100%;object-fit:cover" />
@@ -668,6 +671,64 @@
 
   function unitLabel(category) {
     return category === 'volume' ? 'ml' : category === 'weight' ? 'g' : 'u';
+  }
+
+  // ── Ubicación ─────────────────────────────────────────
+  function loadSavedLocation() {
+    const saved = localStorage.getItem('foocation_location');
+    if (saved) {
+      const loc = JSON.parse(saved);
+      window._userLocation = loc;
+      mostrarUbicacion(loc);
+    }
+  }
+
+  function mostrarUbicacion(loc) {
+    const btn = document.getElementById('loc-btn');
+    const label = document.getElementById('loc-label');
+    if (btn && label) {
+      btn.style.display = 'inline-block';
+      label.textContent = loc.city ? `${loc.city} ${loc.postcode || ''}`.trim() : 'Set location';
+    }
+  }
+
+  window.cambiarUbicacion = async () => {
+    const choice = prompt(
+      'Set your location:\n\n1 = Use GPS\n2 = Enter postal code manually\n\nLeave empty to clear',
+      window._userLocation ? '' : '1'
+    );
+    if (choice === null) return;
+    if (choice.trim() === '') {
+      localStorage.removeItem('foocation_location');
+      window._userLocation = null;
+      document.getElementById('loc-btn').style.display = 'none';
+      return;
+    }
+    if (choice === '1') {
+      detectarUbicacion();
+    } else if (choice === '2') {
+      const cp = prompt('Enter your postal code:', window._userLocation?.postcode || '');
+      if (cp) {
+        const loc = { postcode: cp.trim(), city: 'Manual', state: '' };
+        localStorage.setItem('foocation_location', JSON.stringify(loc));
+        window._userLocation = loc;
+        mostrarUbicacion(loc);
+      }
+    }
+  };
+
+  function detectarUbicacion() {
+    if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const r = await fetch(`/ubicacion?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+        const loc = await r.json();
+        if (loc.error) { alert('Could not detect location'); return; }
+        localStorage.setItem('foocation_location', JSON.stringify(loc));
+        window._userLocation = loc;
+        mostrarUbicacion(loc);
+      } catch(e) { alert('Error detecting location'); }
+    }, () => alert('Location permission denied'));
   }
 
   window.handleAuth = async () => {
@@ -1170,6 +1231,7 @@
   // ── Al cargar ─────────────────────────────────────────
   window.addEventListener('load', () => {
     applyLang();
+    loadSavedLocation();
     const nombre = localStorage.getItem('canasta_nombre');
     if (nombre) document.getElementById('input-nombre').value = nombre;
     const params = new URLSearchParams(window.location.search);
@@ -1583,7 +1645,8 @@
         body: JSON.stringify({
           items: items.map(i => i.nombre),
           cantidades: Object.fromEntries(items.map(i => [i.nombre, i.cantidad])),
-          sizes: Object.fromEntries(items.filter(i => i.size).map(i => [i.nombre, i.size]))
+          sizes: Object.fromEntries(items.filter(i => i.size).map(i => [i.nombre, i.size])),
+          state: window._userLocation?.state || null
         })
       });
       const result = await res.json();
@@ -1722,7 +1785,15 @@
       </div>
     `;
 
-    document.getElementById('desglose-container').innerHTML = tableHTML;
+    // Aviso si hay supers excluidos por ubicación
+    const excluded = data.excluded_supers || [];
+    const excludedBanner = excluded.length > 0 ? `
+      <div style="background:#FEF3C7;border-left:3px solid #D97706;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;color:#92400E">
+        ⚠ Not shown: ${excluded.join(', ')} — no coverage in your area.
+        <button onclick="cambiarUbicacion()" style="background:none;border:none;color:#D97706;text-decoration:underline;cursor:pointer;font-size:12px;padding:0;margin-left:4px">Change location</button>
+      </div>` : '';
+
+    document.getElementById('desglose-container').innerHTML = excludedBanner + tableHTML;
     window._selectedSuper = mejor_canasta;
 
     document.getElementById('resultados').style.display = 'block';
