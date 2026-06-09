@@ -215,7 +215,7 @@
         <button class="add-btn" onclick="agregarItem()">+</button>
       </div>
       <ul id="lista-items" class="items-list">
-        <li class="empty-msg">Añade productos a tu lista</li>
+        <li class="empty-msg" id="empty-msg" data-i18n="emptyList">Añade productos a tu lista</li>
       </ul>
       <div class="sync-status">
         <span class="online-dot"></span>
@@ -294,6 +294,8 @@
       copy: "Copiar",
       seeLink: "ver link →",
       nearbyBtn: "📍 Ver supermercados cercanos",
+      emptyList: "Añade productos a tu lista",
+      defaultListName: "Mi lista de compras",
     },
     en: {
       title: "Basket — Supermarket Price Comparator",
@@ -328,6 +330,8 @@
       copy: "Copy",
       seeLink: "see link →",
       nearbyBtn: "📍 Find nearby supermarkets",
+      emptyList: "Add products to your list",
+      defaultListName: "My shopping list",
     }
   };
 
@@ -541,7 +545,7 @@
     miNombre = getNombre();
     const id = generarId();
     await set(ref(db, `listas/${id}`), {
-      nombre: 'Mi lista de compras',
+      nombre: T[lang].defaultListName,
       creador: miNombre,
       creadoEn: Date.now(),
       items: {}
@@ -598,7 +602,7 @@
     const btn = document.getElementById('btn-comparar');
 
     if (items.length === 0) {
-      ul.innerHTML = '<li class="empty-msg">Añade productos a tu lista</li>';
+      ul.innerHTML = `<li class="empty-msg" id="empty-msg" data-i18n="emptyList">${T[lang].emptyList}</li>`;
       btn.disabled = true;
       return;
     }
