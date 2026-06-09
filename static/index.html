@@ -1668,7 +1668,11 @@
                     if (!p) return `<td style="padding:10px 8px;text-align:right;color:#ccc">–</td>`;
                     const isBest = s === d.mejor_precio?.supermarket;
                     const warning = d.warnings?.[s];
-                    const warningLabel = warning === 'smaller' ? 'Smaller size' : warning === 'larger' ? 'Larger size' : warning === 'approx' ? 'Different size' : null;
+                    const warningLabel =
+                      warning === 'less' ? 'Less than asked' :
+                      warning === 'more' ? 'More than asked' :
+                      warning === 'multiple' ? `Buy ${p.combo_units}×` :
+                      warning === 'no_match' ? 'Different category' : null;
                     return `
                       <td style="padding:10px 8px;text-align:right;${isBest ? 'background:#FAF0E0' : ''}">
                         <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap">
@@ -1680,7 +1684,7 @@
                         </div>
                         ${p.previous_price && p.previous_price > p.price ? `<div style="font-size:10px;color:#DC2626;text-decoration:line-through">${p.previous_price.toFixed(2)}€</div>` : ''}
                         ${p.unit_price ? `<div style="font-size:10px;color:${isBest ? '#C9A96E' : '#aaa'};font-weight:${isBest ? '700' : '400'}">${p.unit_price}${p.unit_label}</div>` : ''}
-                        ${p.size_label ? `<div style="font-size:9px;color:#bbb">${p.size_label}</div>` : ''}
+                        ${p.combo_units > 1 ? `<div style="font-size:9px;color:#C9A96E;font-weight:600">${p.combo_units}× ${p.size_label || ''}</div>` : p.size_label ? `<div style="font-size:9px;color:#bbb">${p.size_label}</div>` : ''}
                       </td>`;
                   }).join('')}
                 </tr>`;

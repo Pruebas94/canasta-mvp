@@ -119,13 +119,10 @@ def _parse_target_size(size_str):
     info = calcular_precio_unitario(1.0, f"x {size_str}")  # truco: usar parser de productos
     return info
 
-def _seleccionar_mejor(products, target):
-    """
-    Selecciona el mejor producto considerando tamaño objetivo.
-    Si hay target, prioriza match exacto > misma categoría ordenada por €/unit.
-    """
-    if not products:
-        return None, None
+import math
+
+def _enriquecer(products):
+    """Añade size_label, unit_price, base_value, category a cada producto"""
     enriched = []
     for p in products:
         unit_info = calcular_precio_unitario(p["price"], p["name"])
@@ -139,38 +136,87 @@ def _seleccionar_mejor(products, target):
                 "category": unit_info["category"],
             })
         enriched.append(item)
+    return enriched
 
-    if target:
-        target_base = target["base_value"]
-        target_cat = target["category"]
-        # Primero: match exacto (±10%) en misma categoría
-        same_cat = [p for p in enriched if p.get("category") == target_cat]
-        exact = [p for p in same_cat
-                 if p.get("base_value") and 0.9 <= p["base_value"] / target_base <= 1.1]
-        if exact:
-            best = min(exact, key=lambda x: x.get("unit_price") or x["price"])
-            return best, "exact"
-        # Segundo: misma categoría, ordenado por €/unidad
-        if same_cat:
-            valid = [p for p in same_cat if p.get("unit_price")]
-            if valid:
-                best = min(valid, key=lambda x: x["unit_price"])
-                warning = None
-                if best.get("base_value"):
-                    ratio = best["base_value"] / target_base
-                    if ratio < 0.5:
-                        warning = "smaller"
-                    elif ratio > 2:
-                        warning = "larger"
-                return best, warning or "approx"
+def _mejor_combinacion(products, target, qty_user=1):
+    """
+    Para cada producto, calcula cuántas unidades comprar para cubrir el target.
+    Devuelve la opción más barata (puede ser N unidades del mismo producto).
 
-    # Sin target: ordenar por €/unidad si todos tienen, sino por precio absoluto
-    with_unit = [p for p in enriched if p.get("unit_price")]
-    if with_unit and len(with_unit) == len(enriched):
-        best = min(with_unit, key=lambda x: x["unit_price"])
-        return best, None
-    best = min(enriched, key=lambda x: x["price"])
-    return best, None
+    Ejemplo target 1L (1000ml), qty_user=2 → necesito 2000ml total
+    Para cada producto con tamaño conocido:
+      units = ceil(2000 / producto.base_value)
+      total_price = units × producto.price
+    Elige el de menor total_price.
+    """
+    if not products:
+        return None, None
+
+    enriched = _enriquecer(products)
+
+    if not target:
+        # Sin target: ordenar por €/unidad si todos tienen, sino por precio
+        with_unit = [p for p in enriched if p.get("unit_price")]
+        if with_unit and len(with_unit) == len(enriched):
+            return min(with_unit, key=lambda x: x["unit_price"]), None
+        return min(enriched, key=lambda x: x["price"]), None
+
+    target_base = target["base_value"]
+    target_cat = target["category"]
+    target_total = target_base * qty_user  # cantidad total a cubrir
+
+    # Filtrar misma categoría con tamaño detectable
+    candidates = [p for p in enriched
+                  if p.get("category") == target_cat and p.get("base_value")]
+
+    if not candidates:
+        # Sin candidatos de la categoría: fallback al más barato global
+        return min(enriched, key=lambda x: x["price"]), "no_match"
+
+    # Para cada producto, calcular la combinación óptima
+    options = []
+    for p in candidates:
+        size = p["base_value"]
+        units = max(1, math.ceil(target_total / size))
+        total_price = round(units * p["price"], 2)
+        total_size = units * size
+        coverage = total_size / target_total  # 1.0 = exacto, >1 = sobra
+
+        # Penalizar si sobra demasiado (más de 50%)
+        if coverage > 1.5:
+            penalty = (coverage - 1) * 0.1  # 10% peor por cada 100% extra
+        else:
+            penalty = 0
+
+        options.append({
+            **p,
+            "units_needed": units,
+            "combo_price": total_price,
+            "combo_size": total_size,
+            "coverage": round(coverage, 2),
+            "score": total_price * (1 + penalty),
+        })
+
+    # Ordenar por score (precio efectivo penalizando sobras)
+    options.sort(key=lambda x: x["score"])
+    best = options[0]
+
+    # Crear copia con campos del combo
+    result = dict(best)
+    result["price"] = best["combo_price"]  # precio del combo es el precio que pagas
+    result["precio_unitario"] = best["price"]  # precio por una unidad del producto
+    result["combo_units"] = best["units_needed"]
+    result["combo_size_label"] = f'{best["units_needed"]}× {best.get("size_label", "")}'.strip()
+
+    warning = None
+    if best["coverage"] < 0.95:
+        warning = "less"
+    elif best["coverage"] > 1.3:
+        warning = "more"
+    elif best["units_needed"] > 1:
+        warning = "multiple"
+
+    return result, warning
 
 
 async def comparar(request: SearchRequest):
@@ -197,14 +243,15 @@ async def comparar(request: SearchRequest):
             if not products:
                 continue
             super_name = products[0]["supermarket"]
-            best, warning = _seleccionar_mejor(products, target_size)
+            best, warning = _mejor_combinacion(products, target_size, qty)
             if not best:
                 continue
-            p_copy = dict(best)
-            p_copy["precio_unitario"] = best["price"]
-            p_copy["cantidad"] = qty
-            p_copy["price"] = round(best["price"] * qty, 2)
-            por_super[super_name] = p_copy
+            # Si NO hay target_size, aplicar qty manualmente
+            if not target_size:
+                best["precio_unitario"] = best["price"]
+                best["price"] = round(best["price"] * qty, 2)
+            best["cantidad"] = qty
+            por_super[super_name] = best
             if warning:
                 warnings[super_name] = warning
 
