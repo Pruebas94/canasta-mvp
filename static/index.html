@@ -190,6 +190,7 @@
     </div>
     <button class="btn btn-primary" onclick="crearLista()" data-i18n="createList">+ Crear nueva lista</button>
     <button class="btn btn-secondary" onclick="toggleAbrirLista()" data-i18n="openList">Abrir lista existente</button>
+    <button id="btn-mis-listas" class="btn btn-secondary" onclick="mostrarMisListas()" style="display:none">📋 My lists</button>
     <div id="abrir-lista-box" style="display:none" class="card">
       <h2 data-i18n="listCode">Código de lista</h2>
       <div class="input-group">
@@ -197,6 +198,26 @@
         <button onclick="abrirListaCodigo()">→</button>
       </div>
     </div>
+  </div>
+
+  <!-- MIS LISTAS -->
+  <div id="screen-listas" class="screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 style="font-family:Georgia,serif;font-weight:400;font-size:22px">My lists</h2>
+      <button onclick="crearListaDesdeHome()" style="background:#1A1A1A;color:#F5F0EA;border:none;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer">+ New</button>
+    </div>
+
+    <div id="listas-activas-section">
+      <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Active</div>
+      <div id="listas-activas"><div class="empty-msg">No active lists</div></div>
+    </div>
+
+    <div id="listas-pasadas-section" style="margin-top:20px">
+      <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Past</div>
+      <div id="listas-pasadas"><div class="empty-msg">No past lists</div></div>
+    </div>
+
+    <button onclick="mostrarScreen('screen-home')" class="btn btn-secondary" style="margin-top:16px">← Back</button>
   </div>
 
   <!-- PERFIL -->
@@ -288,15 +309,15 @@
     <div class="share-box">
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-size:16px">🔗</span>
-        <div id="codigo-lista" style="font-size:22px;font-weight:800;letter-spacing:4px;color:#C9A96E;cursor:pointer;flex:1" onclick="copiarCodigo()" title="Click para copiar"></div>
-        <button id="copy-link-btn" onclick="copiarCodigo()" style="background:#1A1A1A;color:#F5F0EA;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer" data-i18n="copy">Copiar</button>
-
+        <div id="codigo-lista" style="font-size:22px;font-weight:800;letter-spacing:4px;color:#C9A96E;cursor:pointer;flex:1" onclick="copiarCodigo()" title="Click to copy"></div>
+        <button id="copy-link-btn" onclick="copiarCodigo()" style="background:#1A1A1A;color:#F5F0EA;border:none;border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600;cursor:pointer" data-i18n="copy">Copy</button>
+        <button onclick="compartirLista()" style="background:#C9A96E;color:white;border:none;border-radius:8px;padding:7px 10px;font-size:16px;cursor:pointer" title="Share">↗</button>
       </div>
       <div id="share-url-input-wrap" style="display:none;margin-top:10px">
-        <input id="share-url-input" type="text" readonly style="width:100%;padding:8px 12px;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#555" />
+        <input id="share-url-input" type="text" readonly style="width:100%;padding:8px 12px;border:1px solid #E8D9C4;border-radius:8px;font-size:12px;color:#555" />
       </div>
       <div style="margin-top:6px">
-        <button id="ver-link-btn" onclick="toggleLink()" style="background:none;border:none;color:#C9A96E;font-size:12px;cursor:pointer;padding:0;opacity:0.7" data-i18n="seeLink">ver link →</button>
+        <button id="ver-link-btn" onclick="toggleLink()" style="background:none;border:none;color:#C9A96E;font-size:12px;cursor:pointer;padding:0;opacity:0.7" data-i18n="seeLink">see link →</button>
       </div>
     </div>
 
@@ -518,12 +539,16 @@
         photo.src = user.photoURL;
         avatar.style.display = 'block';
       }
-      // Prerellenar nombre si no tiene
       const nombreInput = document.getElementById('input-nombre');
       if (!nombreInput.value) nombreInput.value = user.displayName || '';
+      // Mostrar botón mis listas
+      const btnML = document.getElementById('btn-mis-listas');
+      if (btnML) btnML.style.display = 'block';
     } else {
       label.textContent = T[lang].signIn;
       avatar.style.display = 'none';
+      const btnML = document.getElementById('btn-mis-listas');
+      if (btnML) btnML.style.display = 'none';
     }
   });
 
@@ -1018,12 +1043,16 @@
   window.crearLista = async () => {
     miNombre = getNombre();
     const id = generarId();
+    const nombre = T[lang].defaultListName;
     await set(ref(db, `listas/${id}`), {
-      nombre: T[lang].defaultListName,
-      creador: miNombre,
-      creadoEn: Date.now(),
-      items: {}
+      nombre, creador: miNombre, creadoEn: Date.now(), items: {}
     });
+    // Guardar en perfil si está logueado
+    if (currentUser) {
+      await set(ref(db, `users/${currentUser.uid}/misListas/${id}`), {
+        id, nombre, creadoEn: Date.now(), itemCount: 0, completada: false
+      });
+    }
     conectarLista(id);
   };
 
@@ -1152,8 +1181,83 @@
     window.history.pushState({}, '', '/');
     document.getElementById('header-list-name').style.display = 'none';
     document.getElementById('resultados').style.display = 'none';
+    const cpBtn = document.getElementById('complete-purchase-btn');
+    if (cpBtn) cpBtn.remove();
     mostrarScreen('screen-home');
   };
+
+  // ── Compartir lista ───────────────────────────────────
+  window.compartirLista = async () => {
+    const url = document.getElementById('share-url-input').value;
+    const code = document.getElementById('codigo-lista').textContent;
+    const text = `Join my Foocation shopping list! Code: ${code}`;
+
+    if (navigator.share) {
+      // Web Share API — móvil abre WhatsApp, Telegram, etc.
+      try {
+        await navigator.share({ title: 'Foocation Shopping List', text, url });
+      } catch(e) {
+        if (e.name !== 'AbortError') copiarLink();
+      }
+    } else {
+      // Desktop: copiar link
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = event.target;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✓';
+        setTimeout(() => btn.innerHTML = orig, 1500);
+      });
+    }
+  };
+
+  // ── Mis listas ────────────────────────────────────────
+  window.mostrarMisListas = () => {
+    mostrarScreen('screen-listas');
+    cargarMisListas();
+  };
+
+  window.crearListaDesdeHome = () => {
+    mostrarScreen('screen-home');
+    setTimeout(() => crearLista(), 100);
+  };
+
+  function cargarMisListas() {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+
+    onValue(ref(db, `users/${uid}/misListas`), snap => {
+      const data = snap.val();
+      const activas = document.getElementById('listas-activas');
+      const pasadas = document.getElementById('listas-pasadas');
+      if (!activas || !pasadas) return;
+
+      if (!data) {
+        activas.innerHTML = `<div class="empty-msg">No active lists</div>`;
+        pasadas.innerHTML = `<div class="empty-msg">No past lists</div>`;
+        return;
+      }
+
+      const listas = Object.values(data).sort((a,b) => b.creadoEn - a.creadoEn);
+      const actList = listas.filter(l => !l.completada);
+      const pastList = listas.filter(l => l.completada);
+
+      const renderLista = (l) => `
+        <div onclick="abrirListaPorId('${l.id}')" style="background:white;border:1px solid #E8E2D9;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:15px">${l.completada ? '✓ ' : '🛒 '}${l.nombre || 'Shopping list'}</div>
+            <div style="font-size:12px;color:#aaa;margin-top:2px">
+              ${l.itemCount || 0} items
+              ${l.completada ? ` · Completed ${new Date(l.completadaEn||l.creadoEn).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}` : ''}
+              ${!l.completada ? ` · Code: <b style="color:#C9A96E">${l.id.toUpperCase()}</b>` : ''}
+            </div>
+          </div>
+          <span style="color:#D4C9B8;font-size:18px">›</span>
+        </div>`;
+
+      activas.innerHTML = actList.length ? actList.map(renderLista).join('') : `<div class="empty-msg">No active lists</div>`;
+      pasadas.innerHTML = pastList.length ? pastList.map(renderLista).join('') : `<div class="empty-msg">No past lists yet</div>`;
+    }, { onlyOnce: true });
+  }
 
   window.copiarLink = () => {
     const url = document.getElementById('share-url-input').value;
@@ -1498,6 +1602,18 @@
 
       // 3. Recalcular frecuencias smart learning
       await actualizarSmartLearning(uid);
+
+      // 4. Marcar lista como completada en "mis listas"
+      if (listaId) {
+        await update(ref(db, `users/${uid}/misListas/${listaId}`), {
+          completada: true,
+          completadaEn: Date.now(),
+          itemCount: Object.keys(itemsComprados).length,
+        });
+        // Mostrar botón mis listas
+        const btnML = document.getElementById('btn-mis-listas');
+        if (btnML) btnML.style.display = 'block';
+      }
     }
 
     // Feedback al usuario
