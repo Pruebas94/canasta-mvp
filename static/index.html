@@ -254,6 +254,23 @@
       </div>
     </div>
 
+    <!-- Smart Learning -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0">🤖 Smart learning</h2>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <span style="font-size:12px;color:#aaa" id="smart-label">ON</span>
+          <div id="smart-toggle" onclick="toggleSmartLearning()" style="width:40px;height:22px;background:#C9A96E;border-radius:20px;position:relative;cursor:pointer;transition:background 0.2s">
+            <div style="width:18px;height:18px;background:white;border-radius:50%;position:absolute;top:2px;right:2px;transition:right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>
+          </div>
+        </label>
+      </div>
+      <p style="font-size:13px;color:#888;margin-bottom:10px">Foocation learns your buying patterns automatically and reminds you when it's time to restock.</p>
+      <div id="smart-patterns">
+        <div style="color:#bbb;font-size:13px;text-align:center;padding:8px">Buy more to learn your patterns</div>
+      </div>
+    </div>
+
     <!-- Historial de compras -->
     <div class="card">
       <h2>📋 Purchase history</h2>
@@ -577,6 +594,36 @@
 
     // Hábitos
     cargarHabitos();
+
+    // Smart Learning toggle state
+    onValue(ref(db, `users/${uid}/settings/smartLearning`), snap => {
+      const on = snap.val() !== false;
+      const toggle = document.getElementById('smart-toggle');
+      const label = document.getElementById('smart-label');
+      if (toggle) toggle.style.background = on ? '#C9A96E' : '#D4C9B8';
+      if (label) label.textContent = on ? 'ON' : 'OFF';
+    }, { onlyOnce: true });
+
+    // Smart patterns
+    onValue(ref(db, `users/${uid}/smartPatterns`), snap => {
+      const el = document.getElementById('smart-patterns');
+      if (!el) return;
+      const data = snap.val();
+      if (!data || Object.keys(data).length === 0) {
+        el.innerHTML = `<div style="color:#bbb;font-size:13px;text-align:center;padding:8px">Buy more to learn your patterns</div>`;
+        return;
+      }
+      el.innerHTML = Object.values(data).map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F5F0EA">
+          <div>
+            <div style="font-weight:600;font-size:14px;text-transform:capitalize">${p.nombreDisplay}</div>
+            <div style="font-size:12px;color:#888">Usually every ${p.frecuenciaDias} days · ${p.nCompras} purchases</div>
+          </div>
+          ${p.tocaComprar
+            ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">🛒 Buy now!</span>`
+            : `<span style="font-size:12px;color:#aaa">${p.frecuenciaDias - p.diasDesde}d left</span>`}
+        </div>`).join('');
+    }, { onlyOnce: true });
   }
 
   // ── Hábitos de consumo ────────────────────────────────
@@ -591,32 +638,37 @@
       const ahora = Date.now();
       const habitos = Object.entries(data);
       el.innerHTML = habitos.map(([key, h]) => {
-        // Calcular si toca comprar
         const periodoMs = { day: 86400000, week: 604800000, month: 2592000000 };
-        const intervalo = periodoMs[h.periodo] || periodoMs.week;
+        const consumoDiario = h.cantidad / (h.periodo === 'day' ? 1 : h.periodo === 'week' ? 7 : 30);
+
+        // Calcular stock restante
         const ultimaCompra = h.ultimaCompra || 0;
-        const transcurrido = ahora - ultimaCompra;
-        const porcentaje = Math.min((transcurrido / intervalo) * 100, 100);
-        const tocaComprar = transcurrido >= intervalo;
-        const diasRestantes = Math.max(0, Math.round((intervalo - transcurrido) / 86400000));
+        const diasDesdeCompra = (ahora - ultimaCompra) / 86400000;
+        const stockInicial = h.stockActual || 0;
+        const stockConsumido = consumoDiario * diasDesdeCompra;
+        const stockRestante = Math.max(0, stockInicial - stockConsumido);
+        const diasRestantesStock = consumoDiario > 0 ? Math.floor(stockRestante / consumoDiario) : 999;
+        const tocaComprar = stockRestante <= 0 || (ultimaCompra === 0);
+        const porcentaje = stockInicial > 0 ? Math.min((stockRestante / stockInicial) * 100, 100) : 0;
 
         return `
           <div style="padding:10px 0;border-bottom:1px solid #F5F0EA">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <span style="font-weight:600;font-size:14px">${h.producto}</span>
               <div style="display:flex;gap:6px;align-items:center">
-                ${tocaComprar ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">🛒 Buy now!</span>` : `<span style="font-size:12px;color:#aaa">${diasRestantes}d left</span>`}
+                ${tocaComprar
+                  ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">🛒 Buy now!</span>`
+                  : `<span style="font-size:12px;color:#aaa">${diasRestantesStock}d left</span>`}
                 <button onclick="eliminarHabito('${key}')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:14px">✕</button>
               </div>
             </div>
-            <div style="font-size:12px;color:#888;margin-bottom:6px">${h.cantidad} ${h.unidad} / ${h.periodo}</div>
-            <div style="background:#F5F0EA;border-radius:20px;height:6px;overflow:hidden">
-              <div style="background:${tocaComprar ? '#C9A96E' : '#D4C9B8'};height:100%;width:${porcentaje}%;border-radius:20px;transition:width 0.3s"></div>
+            <div style="font-size:12px;color:#888;margin-bottom:2px">
+              Consume: ${h.cantidad} ${h.unidad}/${h.periodo}
+              ${h.stockActual > 0 ? `· Stock: <b style="color:#1A1A1A">${stockRestante.toFixed(1)} ${h.unidad}</b>` : '· No stock recorded yet'}
             </div>
-            ${tocaComprar ? `
-              <button onclick="marcarComprado('${key}')" style="margin-top:8px;width:100%;padding:8px;background:#1A1A1A;color:#F5F0EA;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
-                ✓ Mark as bought
-              </button>` : ''}
+            <div style="background:#F5F0EA;border-radius:20px;height:6px;overflow:hidden;margin:6px 0">
+              <div style="background:${stockRestante < h.cantidad ? '#C9A96E' : '#D4C9B8'};height:100%;width:${porcentaje}%;border-radius:20px;transition:width 0.5s"></div>
+            </div>
           </div>`;
       }).join('');
     }, { onlyOnce: true });
@@ -655,6 +707,58 @@
     if (!currentUser) return;
     await remove(ref(db, `users/${currentUser.uid}/habitos/${key}`));
     cargarHabitos();
+  };
+
+  // ── Smart Learning ────────────────────────────────────
+  async function actualizarSmartLearning(uid) {
+    const snap = await new Promise(resolve =>
+      onValue(ref(db, `users/${uid}/smartLearning`), resolve, { onlyOnce: true })
+    );
+    const data = snap.val();
+    if (!data) return;
+
+    const smartRef = ref(db, `users/${uid}/smartPatterns`);
+    const patterns = {};
+
+    for (const [producto, compras] of Object.entries(data)) {
+      const fechas = Object.values(compras)
+        .map(c => c.fecha)
+        .sort((a, b) => a - b);
+
+      if (fechas.length < 2) continue; // necesitamos al menos 2 compras
+
+      // Calcular intervalo promedio entre compras
+      const intervalos = [];
+      for (let i = 1; i < fechas.length; i++) {
+        intervalos.push(fechas[i] - fechas[i - 1]);
+      }
+      const avgMs = intervalos.reduce((a, b) => a + b, 0) / intervalos.length;
+      const avgDias = Math.round(avgMs / 86400000);
+      const ultimaCompra = fechas[fechas.length - 1];
+      const diasDesde = Math.round((Date.now() - ultimaCompra) / 86400000);
+      const tocaComprar = diasDesde >= avgDias;
+
+      patterns[producto] = {
+        nombreDisplay: producto.replace(/_/g, ' '),
+        frecuenciaDias: avgDias,
+        ultimaCompra,
+        diasDesde,
+        tocaComprar,
+        nCompras: fechas.length,
+      };
+    }
+
+    await set(smartRef, patterns);
+  }
+
+  window.toggleSmartLearning = async () => {
+    if (!currentUser) return;
+    const snap = await new Promise(resolve =>
+      onValue(ref(db, `users/${currentUser.uid}/settings/smartLearning`), resolve, { onlyOnce: true })
+    );
+    const current = snap.val() !== false; // default ON
+    await set(ref(db, `users/${currentUser.uid}/settings/smartLearning`), !current);
+    cargarPerfil();
   };
 
   // Guardar ahorro cada vez que se compara
@@ -1282,41 +1386,69 @@
     const result = window._lastCompareResult;
     if (!result) return;
 
-    // Marcar todos los items como done en Firebase
+    // Leer items reales de la lista (con cantidades y tamaños)
+    let itemsComprados = {};
     if (listaId) {
       const snap = await new Promise(resolve =>
         onValue(ref(db, `listas/${listaId}/items`), resolve, { onlyOnce: true })
       );
       const data = snap.val();
       if (data) {
-        for (const key of Object.keys(data)) {
-          await update(ref(db, `listas/${listaId}/items/${key}`), { done: true });
+        for (const [key, item] of Object.entries(data)) {
+          if (!item.done) {
+            itemsComprados[item.nombre] = {
+              cantidad: item.cantidad || 1,
+              size: item.size || null,
+            };
+            // Marcar como done
+            await update(ref(db, `listas/${listaId}/items/${key}`), { done: true });
+          }
         }
       }
     }
 
-    // Guardar en historial solo si hay usuario logueado
-    if (currentUser && result.totales) {
-      const vals = Object.values(result.totales);
-      const minTotal = Math.min(...vals);
-      const maxTotal = Math.max(...vals);
-      await guardarAhorro(minTotal, maxTotal, result.items);
+    if (currentUser) {
+      const uid = currentUser.uid;
 
-      // Actualizar stock de hábitos comprados
-      const itemsComprados = Object.keys(result.items);
-      const habitosSnap = await new Promise(resolve =>
-        onValue(ref(db, `users/${currentUser.uid}/habitos`), resolve, { onlyOnce: true })
-      );
-      const habitos = habitosSnap.val();
-      if (habitos) {
-        for (const [key, h] of Object.entries(habitos)) {
-          if (itemsComprados.some(i => i.toLowerCase().includes(h.producto.toLowerCase()))) {
-            await update(ref(db, `users/${currentUser.uid}/habitos/${key}`), {
-              ultimaCompra: Date.now()
-            });
-          }
-        }
+      // 1. Guardar ahorro en historial
+      if (result.totales) {
+        const vals = Object.values(result.totales);
+        await guardarAhorro(Math.min(...vals), Math.max(...vals), result.items);
       }
+
+      // 2. Actualizar stock de hábitos + smart learning
+      const habitosSnap = await new Promise(resolve =>
+        onValue(ref(db, `users/${uid}/habitos`), resolve, { onlyOnce: true })
+      );
+      const habitos = habitosSnap.val() || {};
+
+      for (const [nombre, compra] of Object.entries(itemsComprados)) {
+        // Buscar hábito que coincida
+        const habitoEntry = Object.entries(habitos).find(([k, h]) =>
+          nombre.toLowerCase().includes(h.producto.toLowerCase())
+        );
+
+        if (habitoEntry) {
+          const [hKey, h] = habitoEntry;
+          // Calcular stock: stock_anterior + cantidad_comprada
+          const stockAnterior = h.stockActual || 0;
+          const stockNuevo = stockAnterior + compra.cantidad;
+          await update(ref(db, `users/${uid}/habitos/${hKey}`), {
+            ultimaCompra: Date.now(),
+            stockActual: stockNuevo,
+            ultimaCantidad: compra.cantidad,
+          });
+        }
+
+        // Smart learning: registrar esta compra para aprender frecuencia
+        await push(ref(db, `users/${uid}/smartLearning/${nombre.toLowerCase().replace(/\s+/g,'_')}`), {
+          fecha: Date.now(),
+          cantidad: compra.cantidad,
+        });
+      }
+
+      // 3. Recalcular frecuencias smart learning
+      await actualizarSmartLearning(uid);
     }
 
     // Feedback al usuario
