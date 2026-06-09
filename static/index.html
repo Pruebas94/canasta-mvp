@@ -332,26 +332,30 @@
     document.querySelector('.hero p').textContent = t.heroSub;
     document.querySelectorAll('.card h2')[0].textContent = t.yourName;
     document.getElementById('input-nombre').placeholder = t.namePlaceholder;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    const setPlaceholder = (id, val) => { const el = document.getElementById(id); if (el) el.placeholder = val; };
+    const setIndex = (sel, i, val) => { const els = document.querySelectorAll(sel); if (els[i]) els[i].textContent = val; };
+
+    // Home
+    document.querySelector('.hero h2').textContent = t.heroTitle;
+    document.querySelector('.hero p').textContent = t.heroSub;
+    setIndex('.card h2', 0, t.yourName);
+    setPlaceholder('input-nombre', t.namePlaceholder);
     document.querySelector('.nick-hint').textContent = t.nameHint;
-    document.querySelectorAll('.btn-primary')[0].textContent = t.createList;
-    document.querySelectorAll('.btn-secondary')[0].textContent = t.openList;
+    setIndex('.btn-primary', 0, t.createList);
+    setIndex('.btn-secondary', 0, t.openList);
     // Lista screen
-    document.getElementById('share-box-title').textContent = t.shareTitle;
-    document.getElementById('copy-link-btn').textContent = t.copyLink;
-    document.getElementById('lista-card-title').textContent = t.shoppingList;
-    document.getElementById('input-producto').placeholder = t.productPlaceholder;
-    document.getElementById('sync-label').textContent = t.synced;
-    document.getElementById('btn-comparar').textContent = t.compareBtn;
-    document.querySelectorAll('.btn-secondary')[1].textContent = t.backBtn;
-    const loadingText = document.getElementById('loading-text');
-    if (loadingText) loadingText.textContent = t.loading;
-    const breakdownTitle = document.getElementById('breakdown-title');
-    if (breakdownTitle) breakdownTitle.textContent = t.breakdown;
-    // Botones share box
-    const copyBtn = document.getElementById('copy-link-btn');
-    if (copyBtn) copyBtn.textContent = t.copy;
-    const verLinkBtn = document.getElementById('ver-link-btn');
-    if (verLinkBtn) verLinkBtn.textContent = t.seeLink;
+    set('lista-card-title', t.shoppingList);
+    setPlaceholder('input-producto', t.productPlaceholder);
+    set('sync-label', t.synced);
+    set('btn-comparar', t.compareBtn);
+    setIndex('.btn-secondary', 1, t.backBtn);
+    // Share box
+    set('copy-link-btn', t.copy);
+    set('ver-link-btn', t.seeLink);
+    // Resultados
+    set('loading-text', t.loading);
+    set('breakdown-title', t.breakdown);
   }
 
   window.toggleLang = () => {
