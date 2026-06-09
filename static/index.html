@@ -726,9 +726,11 @@
             <span style="font-weight:600;font-size:14px;text-transform:capitalize">${p.nombreDisplay}</span>
             ${p.tocaComprar
               ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">🛒 Buy now!</span>`
-              : p.diasParaAgotar !== null
+              : (typeof p.diasParaAgotar === 'number' && p.diasParaAgotar > 0)
                 ? `<span style="font-size:12px;color:#aaa">${p.diasParaAgotar}d of stock left</span>`
-                : `<span style="font-size:12px;color:#aaa">${p.frecuenciaDias ? p.frecuenciaDias - p.diasDesde + 'd left' : '–'}</span>`}
+                : (typeof p.frecuenciaDias === 'number')
+                  ? `<span style="font-size:12px;color:#aaa">${Math.max(0, p.frecuenciaDias - p.diasDesde)}d left</span>`
+                  : `<span style="font-size:12px;color:#aaa">learning…</span>`}
           </div>
           <div style="font-size:12px;color:#888;margin-bottom:4px">
             ${p.frecuenciaDias ? `Buys every ~${p.frecuenciaDias} days` : ''}
@@ -1639,11 +1641,16 @@
       if (data) {
         for (const [key, item] of Object.entries(data)) {
           if (!item.done) {
+            // Calcular cantidad real: multiplier × size_number
+            const multiplier = item.cantidad || 1;
+            const sizeMatch = item.size ? item.size.match(/(\d+(?:\.\d+)?)/) : null;
+            const sizeNum = sizeMatch ? parseFloat(sizeMatch[1]) : 1;
+            const cantidadReal = multiplier * sizeNum;
+
             itemsComprados[item.nombre] = {
-              cantidad: item.cantidad || 1,
+              cantidad: cantidadReal,
               size: item.size || null,
             };
-            // Marcar como done
             await update(ref(db, `listas/${listaId}/items/${key}`), { done: true });
           }
         }
