@@ -22,7 +22,21 @@
     .lang-btn { background: rgba(201,169,110,0.2); border: 1px solid rgba(201,169,110,0.4); color: #C9A96E; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; cursor: pointer; }
     .lang-btn:hover { background: rgba(201,169,110,0.35); }
 
-    .container { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
+    /* Layout con paneles laterales */
+    .page-wrapper { display: flex; justify-content: center; gap: 20px; padding: 20px 16px; max-width: 1200px; margin: 0 auto; }
+    .container { flex: 1; max-width: 680px; padding: 0; }
+    .side-panel { width: 180px; flex-shrink: 0; }
+    .side-panel-inner { position: sticky; top: 20px; }
+    .sponsor-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 8px; }
+    .sponsor-card { background: white; border: 1px solid #E8E2D9; border-radius: 14px; padding: 16px; margin-bottom: 12px; text-align: center; cursor: pointer; transition: box-shadow 0.2s; }
+    .sponsor-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .sponsor-card .sponsor-logo { font-size: 28px; margin-bottom: 8px; }
+    .sponsor-card .sponsor-name { font-size: 13px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
+    .sponsor-card .sponsor-offer { font-size:12px; color: #C9A96E; font-weight: 600; }
+    .sponsor-card .sponsor-sub { font-size: 11px; color: #aaa; margin-top: 4px; }
+    .sponsor-cta { display: block; margin-top: 10px; padding: 7px; background: #1A1A1A; color: #F5F0EA; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; }
+    /* Ocultar paneles en móvil */
+    @media (max-width: 900px) { .side-panel { display: none; } .page-wrapper { padding: 20px 16px; } }
 
     .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #E8E2D9; }
     .card h2 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -170,7 +184,30 @@
   <button class="lang-btn" onclick="toggleLang()" id="lang-btn">ES</button>
 </header>
 
-<div class="container">
+<div class="page-wrapper">
+
+  <!-- Panel izquierdo -->
+  <div class="side-panel">
+    <div class="side-panel-inner">
+      <div class="sponsor-label">Patrocinios</div>
+      <div class="sponsor-card">
+        <div class="sponsor-logo">🟢</div>
+        <div class="sponsor-name">Mercadona</div>
+        <div class="sponsor-offer">-15% esta semana</div>
+        <div class="sponsor-sub">En productos frescos</div>
+        <a class="sponsor-cta" href="https://tienda.mercadona.es" target="_blank">Ver oferta →</a>
+      </div>
+      <div class="sponsor-card">
+        <div class="sponsor-logo">🥛</div>
+        <div class="sponsor-name">Danone</div>
+        <div class="sponsor-offer">2x1 en yogures</div>
+        <div class="sponsor-sub">Solo esta semana</div>
+        <a class="sponsor-cta" href="#" target="_blank">Ver oferta →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
 
   <!-- HOME -->
   <div id="screen-home" class="screen active">
@@ -402,7 +439,34 @@
     </div>
   </div>
 
-</div>
+  </div><!-- /container -->
+
+  <!-- Panel derecho -->
+  <div class="side-panel">
+    <div class="side-panel-inner">
+      <div class="sponsor-label">Patrocinios</div>
+      <div class="sponsor-card">
+        <div class="sponsor-logo">🔴</div>
+        <div class="sponsor-name">DIA</div>
+        <div class="sponsor-offer">Envío gratis</div>
+        <div class="sponsor-sub">Pedidos +30€</div>
+        <a class="sponsor-cta" href="https://www.dia.es" target="_blank">Ver oferta →</a>
+      </div>
+      <div class="sponsor-card">
+        <div class="sponsor-logo">🫒</div>
+        <div class="sponsor-name">Carbonell</div>
+        <div class="sponsor-offer">Aceite AOVE</div>
+        <div class="sponsor-sub">El mejor precio</div>
+        <a class="sponsor-cta" href="#" target="_blank">Ver oferta →</a>
+      </div>
+      <div style="margin-top:16px;text-align:center">
+        <div style="font-size:10px;color:#ddd;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">¿Quieres aparecer aquí?</div>
+        <a href="mailto:hola@foocation.com" style="font-size:12px;color:#C9A96E;font-weight:600;text-decoration:none">Contactar →</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-wrapper -->
 
 <!-- Firebase SDK -->
 <script type="module">
