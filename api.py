@@ -50,10 +50,76 @@ class ActualizarListaRequest(BaseModel):
 
 # ── STARTUP ──────────────────────────────────────────────
 
+import time as _time
+import logging as _logging
+
+_logger = _logging.getLogger("foocation")
+_logging.basicConfig(level=_logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+# Estado del cache de Mercadona
+_mercadona_status = {
+    "loaded": False,
+    "loading": False,
+    "last_update": None,
+    "product_count": 0,
+    "error": None,
+}
+
+REFRESH_INTERVAL = 12 * 60 * 60  # 12 horas
+
+async def _precargar_mercadona():
+    """Precarga el catálogo de Mercadona en background, refrescando cada 12h"""
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
+            _mercadona_status["loading"] = True
+            _logger.info("🛒 Iniciando precarga Mercadona...")
+            t0 = _time.time()
+            products = await loop.run_in_executor(None, mercadona._download_catalog)
+            dt = round(_time.time() - t0, 1)
+            _mercadona_status.update({
+                "loaded": True,
+                "loading": False,
+                "last_update": _time.time(),
+                "product_count": len(products) if products else 0,
+                "error": None,
+            })
+            _logger.info(f"✅ Mercadona precargada: {len(products)} productos en {dt}s. Próxima actualización en 12h")
+        except Exception as e:
+            _mercadona_status.update({"loading": False, "error": str(e)})
+            _logger.exception(f"❌ Error precarga Mercadona: {e}")
+        # Esperar 12 horas
+        await asyncio.sleep(REFRESH_INTERVAL)
+
 @app.on_event("startup")
 async def startup_event():
+    # Si ya hay cache en disco reciente, usarla mientras refresca en background
+    asyncio.create_task(_precargar_mercadona())
+
+@app.get("/admin/status")
+def admin_status():
+    """Endpoint público para verificar el estado del sistema"""
+    return {
+        "mercadona": _mercadona_status,
+        "next_refresh_in_seconds": (
+            int(REFRESH_INTERVAL - (_time.time() - _mercadona_status["last_update"]))
+            if _mercadona_status["last_update"] else None
+        ),
+    }
+
+@app.post("/admin/refresh-mercadona")
+async def refresh_mercadona():
+    """Forzar refresco manual del catálogo de Mercadona"""
     loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, mercadona._load_cache)
+    _mercadona_status["loading"] = True
+    products = await loop.run_in_executor(None, mercadona._download_catalog)
+    _mercadona_status.update({
+        "loaded": True,
+        "loading": False,
+        "last_update": _time.time(),
+        "product_count": len(products) if products else 0,
+    })
+    return {"status": "ok", "products": len(products) if products else 0}
 
 # ── RUTAS PRINCIPALES ────────────────────────────────────
 
