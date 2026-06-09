@@ -226,6 +226,22 @@
             onkeydown="onProductoKeydown(event)" />
           <div id="autocomplete-list" class="autocomplete-list" style="display:none"></div>
         </div>
+        <select id="input-size" style="padding:10px 8px;border:2px solid #E8E2D9;border-radius:12px;font-size:13px;background:#FDFAF7;color:#555;outline:none;cursor:pointer;max-width:80px">
+          <option value="">Any</option>
+          <option value="100ml">100ml</option>
+          <option value="200ml">200ml</option>
+          <option value="250ml">250ml</option>
+          <option value="330ml">330ml</option>
+          <option value="500ml">500ml</option>
+          <option value="750ml">750ml</option>
+          <option value="1L">1L</option>
+          <option value="1.5L">1.5L</option>
+          <option value="2L">2L</option>
+          <option value="250g">250g</option>
+          <option value="500g">500g</option>
+          <option value="1kg">1kg</option>
+          <option value="2kg">2kg</option>
+        </select>
         <input id="input-cantidad" class="qty-input" type="number" value="1" min="1" max="99" />
         <button class="add-btn" onclick="agregarItem()">+</button>
       </div>
@@ -825,7 +841,7 @@
         </button>
         <div class="item-info">
           <span class="item-name ${item.done ? 'done' : ''}">${item.nombre}</span>
-          <span class="item-meta">${T[lang].addedBy} ${item.autor || 'anónimo'}</span>
+          <span class="item-meta">${T[lang].addedBy} ${item.autor || 'anónimo'}${item.size ? ` · <span style="color:#C9A96E;font-weight:600">${item.size}</span>` : ''}</span>
         </div>
         <div class="qty-control">
           <button class="qty-btn minus" onclick="cambiarCantidad('${key}', -1)">−</button>
@@ -844,13 +860,16 @@
   window.agregarItem = async () => {
     const val = document.getElementById('input-producto').value.trim();
     const qty = parseInt(document.getElementById('input-cantidad').value) || 1;
+    const size = document.getElementById('input-size').value;
     if (!val || !listaId) return;
     document.getElementById('input-producto').value = '';
     document.getElementById('input-cantidad').value = '1';
+    document.getElementById('input-size').value = '';
     const itemsRef = ref(db, `listas/${listaId}/items`);
     await push(itemsRef, {
       nombre: val,
       cantidad: qty,
+      size: size || null,
       autor: miNombre,
       done: false,
       creadoEn: Date.now()
@@ -1026,7 +1045,11 @@
       const res = await fetch('/comparar', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ items: items.map(i => i.nombre), cantidades: Object.fromEntries(items.map(i => [i.nombre, i.cantidad])) })
+        body: JSON.stringify({
+          items: items.map(i => i.nombre),
+          cantidades: Object.fromEntries(items.map(i => [i.nombre, i.cantidad])),
+          sizes: Object.fromEntries(items.filter(i => i.size).map(i => [i.nombre, i.size]))
+        })
       });
       const result = await res.json();
       renderResultados(result);
@@ -1071,12 +1094,35 @@
     }).join('');
 
     document.getElementById('desglose-container').innerHTML = Object.entries(itemsData).map(([item, d]) => {
-      const list = Object.entries(d.supermercados).sort((a,b) => a[1].price - b[1].price);
+      let list = Object.entries(d.supermercados).sort((a,b) => a[1].price - b[1].price);
       const mejor = d.mejor_precio;
       const qty = d.cantidad || 1;
+      const sizeFilter = d.size_filter;
+
+      // Filtrar por tamaño si se especificó
+      if (sizeFilter) {
+        const filtered = list.filter(([s, p]) => p.size_label && p.size_label.toLowerCase().includes(sizeFilter.toLowerCase().replace('l','').replace('ml','').replace('g','').replace('kg','')));
+        if (filtered.length > 0) list = filtered;
+      }
+
+      const superUrls = {
+        'Mercadona': `https://tienda.mercadona.es/search-results?query=${encodeURIComponent(item)}`,
+        'DIA': `https://www.dia.es/search?q=${encodeURIComponent(item)}`,
+        'Eroski': `https://supermercado.eroski.es/es/search/results/?q=${encodeURIComponent(item)}`,
+        'Ahorramas': `https://www.ahorramas.com/search?q=${encodeURIComponent(item)}`,
+      };
+      const glovoUrls = {
+        'Mercadona': 'https://glovoapp.com/es/es/buscar/?q=mercadona',
+        'DIA': 'https://glovoapp.com/es/es/buscar/?q=dia+supermercado',
+        'Eroski': 'https://glovoapp.com/es/es/buscar/?q=eroski',
+        'Ahorramas': 'https://glovoapp.com/es/es/buscar/?q=ahorramas',
+      };
+
       return `
         <div class="producto-row">
-          <h4>🛒 ${item} ${qty > 1 ? `<span style="font-size:13px;color:#2ecc71;font-weight:600">×${qty}</span>` : ''}</h4>
+          <h4>🛒 ${item} ${qty > 1 ? `<span style="font-size:13px;color:#C9A96E;font-weight:600">×${qty}</span>` : ''}
+            ${sizeFilter ? `<span style="font-size:12px;background:#FAF0E0;color:#C9A96E;padding:2px 8px;border-radius:12px;margin-left:6px">${sizeFilter}</span>` : ''}
+          </h4>
           ${list.map(([s, p]) => `
             <div class="precio-row ${s === mejor?.supermarket ? 'mejor' : ''}">
               <span class="super">${s}</span>
@@ -1089,7 +1135,17 @@
                 ${qty > 1 ? `<span style="font-size:11px;color:#aaa;font-weight:400"> (${p.precio_unitario?.toFixed(2)}€ c/u)</span>` : ''}
               </span>
               ${s === mejor?.supermarket ? '<span class="tag-mejor">✓</span>' : ''}
-            </div>`).join('')}
+            </div>
+            ${s === mejor?.supermarket ? `
+              <div style="display:flex;gap:8px;padding:8px 0 4px;border-bottom:1px solid #F5F0EA">
+                <a href="${superUrls[s] || '#'}" target="_blank" style="flex:1;text-align:center;padding:8px;background:#1A1A1A;color:#F5F0EA;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
+                  🛒 Buy online
+                </a>
+                <a href="${glovoUrls[s] || '#'}" target="_blank" style="flex:1;text-align:center;padding:8px;background:#FAF0E0;color:#C9A96E;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #E8D9C4">
+                  🛵 Delivery
+                </a>
+              </div>` : ''}
+          `).join('')}
           ${list.length === 0 ? `<p style="color:#bbb;font-size:13px;padding:4px 0">${T[lang].notFound}</p>` : ''}
         </div>`;
     }).join('');

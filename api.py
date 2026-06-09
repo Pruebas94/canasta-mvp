@@ -38,6 +38,7 @@ Lista = Query()
 class SearchRequest(BaseModel):
     items: list[str]
     cantidades: dict = {}
+    sizes: dict = {}
 
 class CrearListaRequest(BaseModel):
     nombre: str
@@ -146,6 +147,7 @@ async def comparar(request: SearchRequest):
         resultado[item] = {
             "supermercados": por_super,
             "cantidad": qty,
+            "size_filter": request.sizes.get(item),
             "mejor_precio": min(por_super.values(), key=lambda x: x["price"]) if por_super else None,
         }
 
