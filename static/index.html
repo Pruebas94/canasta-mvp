@@ -1621,62 +1621,94 @@
         </div>`;
     }).join('');
 
-    document.getElementById('desglose-container').innerHTML = Object.entries(itemsData).map(([item, d]) => {
-      let list = Object.entries(d.supermercados).sort((a,b) => a[1].price - b[1].price);
-      const mejor = d.mejor_precio;
-      const qty = d.cantidad || 1;
-      const sizeFilter = d.size_filter;
+    // Tabla comparativa estilo Excel
+    const allSupers = supermarkets; // de los totales, ordenados por precio
+    const superUrls = {
+      'Mercadona': item => `https://tienda.mercadona.es/search-results?query=${encodeURIComponent(item)}`,
+      'DIA': item => `https://www.dia.es/search?q=${encodeURIComponent(item)}`,
+      'Eroski': item => `https://supermercado.eroski.es/es/search/results/?q=${encodeURIComponent(item)}`,
+      'Ahorramas': item => `https://www.ahorramas.com/search?q=${encodeURIComponent(item)}`,
+    };
+    const glovoUrls = {
+      'Mercadona': 'https://glovoapp.com/es/es/buscar/?q=mercadona',
+      'DIA': 'https://glovoapp.com/es/es/buscar/?q=dia+supermercado',
+      'Eroski': 'https://glovoapp.com/es/es/buscar/?q=eroski',
+      'Ahorramas': 'https://glovoapp.com/es/es/buscar/?q=ahorramas',
+    };
+    // Guardar para uso posterior
+    window._desgloseData = { itemsData, totales, allSupers, superUrls, glovoUrls };
 
-      // Filtrar por tamaño si se especificó
-      if (sizeFilter) {
-        const filtered = list.filter(([s, p]) => p.size_label && p.size_label.toLowerCase().includes(sizeFilter.toLowerCase().replace('l','').replace('ml','').replace('g','').replace('kg','')));
-        if (filtered.length > 0) list = filtered;
-      }
+    let tableHTML = `
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:10px 8px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #E8E2D9">Product</th>
+              ${allSupers.map(s => `
+                <th style="text-align:right;padding:10px 8px;font-size:12px;font-weight:700;border-bottom:2px solid #E8E2D9;color:${s === mejor_canasta ? '#C9A96E' : '#555'}">${s}</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(itemsData).map(([item, d]) => {
+              const qty = d.cantidad || 1;
+              return `
+                <tr style="border-bottom:1px solid #F5F0EA">
+                  <td style="padding:10px 8px;font-weight:600">
+                    🛒 ${item}
+                    ${qty > 1 ? `<span style="color:#C9A96E;font-size:12px"> ×${qty}</span>` : ''}
+                  </td>
+                  ${allSupers.map(s => {
+                    const p = d.supermercados[s];
+                    if (!p) return `<td style="padding:10px 8px;text-align:right;color:#ccc">–</td>`;
+                    const isBest = s === d.mejor_precio?.supermarket;
+                    return `
+                      <td style="padding:10px 8px;text-align:right;${isBest ? 'background:#FAF0E0' : ''}">
+                        <div style="font-weight:${isBest ? '700' : '600'};color:${isBest ? '#C9A96E' : '#1A1A1A'}">
+                          ${p.price.toFixed(2)}€
+                        </div>
+                        ${p.unit_price ? `<div style="font-size:10px;color:#aaa">${p.unit_price}${p.unit_label}</div>` : ''}
+                      </td>`;
+                  }).join('')}
+                </tr>`;
+            }).join('')}
+            <!-- TOTAL row -->
+            <tr style="background:#FAF6F0;font-weight:800">
+              <td style="padding:14px 8px;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;color:#555">Total</td>
+              ${allSupers.map(s => `
+                <td style="padding:14px 8px;text-align:right;color:${s === mejor_canasta ? '#C9A96E' : '#1A1A1A'};font-size:16px">
+                  ${totales[s].toFixed(2)}€
+                </td>
+              `).join('')}
+            </tr>
+            <!-- Radio selector row -->
+            <tr>
+              <td style="padding:12px 8px;font-size:12px;color:#888">Select:</td>
+              ${allSupers.map(s => `
+                <td style="padding:12px 8px;text-align:right">
+                  <label style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+                    <input type="radio" name="selectedSuper" value="${s}" ${s === mejor_canasta ? 'checked' : ''} onchange="seleccionarSuper('${s}')" style="cursor:pointer;accent-color:#C9A96E" />
+                  </label>
+                </td>
+              `).join('')}
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      const superUrls = {
-        'Mercadona': `https://tienda.mercadona.es/search-results?query=${encodeURIComponent(item)}`,
-        'DIA': `https://www.dia.es/search?q=${encodeURIComponent(item)}`,
-        'Eroski': `https://supermercado.eroski.es/es/search/results/?q=${encodeURIComponent(item)}`,
-        'Ahorramas': `https://www.ahorramas.com/search?q=${encodeURIComponent(item)}`,
-      };
-      const glovoUrls = {
-        'Mercadona': 'https://glovoapp.com/es/es/buscar/?q=mercadona',
-        'DIA': 'https://glovoapp.com/es/es/buscar/?q=dia+supermercado',
-        'Eroski': 'https://glovoapp.com/es/es/buscar/?q=eroski',
-        'Ahorramas': 'https://glovoapp.com/es/es/buscar/?q=ahorramas',
-      };
+      <!-- Action buttons -->
+      <div id="action-buttons" style="display:flex;gap:8px;margin-top:16px">
+        <button id="buy-online-btn" onclick="abrirBuyOnline()" style="flex:1;padding:12px;background:#1A1A1A;color:#F5F0EA;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">
+          🛒 Buy at <span id="selected-super-1">${mejor_canasta}</span>
+        </button>
+        <button onclick="abrirDelivery()" style="flex:1;padding:12px;background:#FAF0E0;color:#C9A96E;border:1px solid #E8D9C4;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">
+          🛵 Delivery from <span id="selected-super-2">${mejor_canasta}</span>
+        </button>
+      </div>
+    `;
 
-      return `
-        <div class="producto-row">
-          <h4>🛒 ${item} ${qty > 1 ? `<span style="font-size:13px;color:#C9A96E;font-weight:600">×${qty}</span>` : ''}
-            ${sizeFilter ? `<span style="font-size:12px;background:#FAF0E0;color:#C9A96E;padding:2px 8px;border-radius:12px;margin-left:6px">${sizeFilter}</span>` : ''}
-          </h4>
-          ${list.map(([s, p]) => `
-            <div class="precio-row ${s === mejor?.supermarket ? 'mejor' : ''}">
-              <span class="super">${s}</span>
-              <div style="flex:1;overflow:hidden">
-                <div class="prod-name">${p.name}</div>
-                ${p.size_label ? `<div style="font-size:11px;color:#C9A96E;font-weight:600">${p.size_label} · ${p.unit_price}${p.unit_label}</div>` : ''}
-              </div>
-              <span class="precio">
-                ${p.price.toFixed(2)}€
-                ${qty > 1 ? `<span style="font-size:11px;color:#aaa;font-weight:400"> (${p.precio_unitario?.toFixed(2)}€ c/u)</span>` : ''}
-              </span>
-              ${s === mejor?.supermarket ? '<span class="tag-mejor">✓</span>' : ''}
-            </div>
-            ${s === mejor?.supermarket ? `
-              <div style="display:flex;gap:8px;padding:8px 0 4px;border-bottom:1px solid #F5F0EA">
-                <a href="${superUrls[s] || '#'}" target="_blank" style="flex:1;text-align:center;padding:8px;background:#1A1A1A;color:#F5F0EA;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none">
-                  🛒 Buy online
-                </a>
-                <a href="${glovoUrls[s] || '#'}" target="_blank" style="flex:1;text-align:center;padding:8px;background:#FAF0E0;color:#C9A96E;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #E8D9C4">
-                  🛵 Delivery
-                </a>
-              </div>` : ''}
-          `).join('')}
-          ${list.length === 0 ? `<p style="color:#bbb;font-size:13px;padding:4px 0">${T[lang].notFound}</p>` : ''}
-        </div>`;
-    }).join('');
+    document.getElementById('desglose-container').innerHTML = tableHTML;
+    window._selectedSuper = mejor_canasta;
 
     document.getElementById('resultados').style.display = 'block';
 
@@ -1692,6 +1724,32 @@
 
     document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
   }
+
+  window.seleccionarSuper = (s) => {
+    window._selectedSuper = s;
+    document.getElementById('selected-super-1').textContent = s;
+    document.getElementById('selected-super-2').textContent = s;
+  };
+
+  window.abrirBuyOnline = () => {
+    const s = window._selectedSuper;
+    const d = window._desgloseData;
+    if (!s || !d) return;
+    // Abrir una pestaña por cada producto que tenga el super seleccionado
+    const items = Object.keys(d.itemsData).filter(item => d.itemsData[item].supermercados[s]);
+    items.forEach(item => {
+      const url = d.superUrls[s] ? d.superUrls[s](item) : '#';
+      window.open(url, '_blank');
+    });
+  };
+
+  window.abrirDelivery = () => {
+    const s = window._selectedSuper;
+    const d = window._desgloseData;
+    if (!s || !d) return;
+    const url = d.glovoUrls[s] || '#';
+    window.open(url, '_blank');
+  };
 
   // ── Completar compra ──────────────────────────────────
   window.completarCompra = async () => {
