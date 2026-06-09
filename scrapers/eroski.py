@@ -22,12 +22,19 @@ def search(query: str) -> list:
                 continue
             prices = re.findall(r"\b(\d+[.,]\d{2})\b", card.get_text())
             if prices and name not in seen:
+                # Detectar promo
+                card_text = card.get_text().lower()
+                has_strike = bool(card.select_one("del, s, [class*=strike], [class*=old-price], [class*=before-price]"))
+                has_promo_word = any(w in card_text for w in ["oferta", "ahorra", "3x2", "2x1", "descuento", "%dto"])
+                on_sale = has_strike or has_promo_word
+
                 seen.add(name)
                 results.append({
                     "supermarket": "Eroski",
                     "name": name,
                     "price": float(prices[0].replace(",", ".")),
                     "unit": "ud",
+                    "on_sale": on_sale,
                 })
     except Exception as e:
         print(f"Eroski error: {e}")

@@ -48,12 +48,19 @@ def search(query: str) -> list:
                 # Validar que el producto coincide con la búsqueda
                 if not _name_matches(name, query_words):
                     continue
+                # Detectar promoción: precio tachado, badge oferta, 3x2, etc.
+                card_text = card.get_text().lower()
+                has_strike = bool(card.select_one("del, s, [class*=strike], [class*=old-price], [class*=before]"))
+                has_promo_word = any(w in card_text for w in ["oferta", "ahorra", "3x2", "2x1", "descuento", "-%", "rebaj"])
+                on_sale = has_strike or has_promo_word
+
                 seen.add(name)
                 results.append({
                     "supermarket": "DIA",
                     "name": name,
                     "price": float(price_match.group(1).replace(",", ".")),
                     "unit": "ud",
+                    "on_sale": on_sale,
                 })
     except Exception as e:
         print(f"DIA error: {e}")

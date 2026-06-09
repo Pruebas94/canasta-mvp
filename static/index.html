@@ -1669,9 +1669,13 @@
                     const isBest = s === d.mejor_precio?.supermarket;
                     return `
                       <td style="padding:10px 8px;text-align:right;${isBest ? 'background:#FAF0E0' : ''}">
-                        <div style="font-weight:${isBest ? '700' : '600'};color:${isBest ? '#C9A96E' : '#1A1A1A'}">
-                          ${p.price.toFixed(2)}€
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+                          <span style="font-weight:${isBest ? '700' : '600'};color:${isBest ? '#C9A96E' : '#1A1A1A'}">
+                            ${p.price.toFixed(2)}€
+                          </span>
+                          ${p.on_sale ? `<span style="background:#DC2626;color:white;font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;letter-spacing:0.3px" title="On promotion">SALE</span>` : ''}
                         </div>
+                        ${p.previous_price && p.previous_price > p.price ? `<div style="font-size:10px;color:#DC2626;text-decoration:line-through">${p.previous_price.toFixed(2)}€</div>` : ''}
                         ${p.unit_price ? `<div style="font-size:10px;color:#aaa">${p.unit_price}${p.unit_label}</div>` : ''}
                       </td>`;
                   }).join('')}

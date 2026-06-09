@@ -48,12 +48,20 @@ def _download_catalog():
                             price_info = p.get("price_instructions", {})
                             price = price_info.get("unit_price") or price_info.get("bulk_price")
                             if price:
+                                price_decreased = bool(price_info.get("price_decreased"))
+                                previous_price = price_info.get("previous_unit_price")
+                                try:
+                                    previous_price = float(previous_price) if previous_price else None
+                                except (TypeError, ValueError):
+                                    previous_price = None
                                 products.append({
                                     "supermarket": "Mercadona",
                                     "name": p.get("display_name", ""),
                                     "price": float(price),
                                     "unit": price_info.get("size_format", "ud"),
                                     "category": cat.get("name", ""),
+                                    "on_sale": price_decreased,
+                                    "previous_price": previous_price,
                                 })
                 except:
                     continue
