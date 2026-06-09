@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+requests
 curl-cffi
 beautifulsoup4
 python-multipart
