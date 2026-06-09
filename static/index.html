@@ -632,6 +632,39 @@
     }
   });
 
+  // ── Sistema de unidades ──────────────────────────────
+  // Categorías: volume (base=ml), weight (base=g), units (base=u)
+  function parseSize(sizeStr) {
+    if (!sizeStr) return null;
+    const s = sizeStr.toLowerCase().trim();
+    const num = parseFloat(s.replace(',','.'));
+    if (isNaN(num)) return null;
+
+    if (s.endsWith('ml'))  return { value: num, base: num, category: 'volume' };
+    if (s.endsWith('cl'))  return { value: num, base: num * 10, category: 'volume' };
+    if (s.endsWith('l'))   return { value: num, base: num * 1000, category: 'volume' };
+    if (s.endsWith('kg'))  return { value: num, base: num * 1000, category: 'weight' };
+    if (s.endsWith('g'))   return { value: num, base: num, category: 'weight' };
+    if (s.endsWith('u') || s.endsWith('uds') || s.includes('unit')) return { value: num, base: num, category: 'units' };
+    return { value: num, base: num, category: 'units' }; // fallback
+  }
+
+  function formatSize(baseValue, category) {
+    if (category === 'volume') {
+      if (baseValue >= 1000) return `${(baseValue/1000).toFixed(baseValue % 1000 === 0 ? 0 : 2).replace(/\.?0+$/,'')}L`;
+      return `${Math.round(baseValue)}ml`;
+    }
+    if (category === 'weight') {
+      if (baseValue >= 1000) return `${(baseValue/1000).toFixed(baseValue % 1000 === 0 ? 0 : 2).replace(/\.?0+$/,'')}kg`;
+      return `${Math.round(baseValue)}g`;
+    }
+    return `${Math.round(baseValue * 10) / 10} u`;
+  }
+
+  function unitLabel(category) {
+    return category === 'volume' ? 'ml' : category === 'weight' ? 'g' : 'u';
+  }
+
   window.handleAuth = async () => {
     if (currentUser) {
       // Mostrar menú: perfil + logout
@@ -735,7 +768,8 @@
           </div>
           <div style="font-size:12px;color:#888;margin-bottom:4px">
             ${p.frecuenciaDias ? `Buys every ~${p.frecuenciaDias} days` : ''}
-            ${p.cantidadTipica ? ` · ~${p.cantidadTipica} units/purchase` : ''}
+            ${p.cantidadTipicaLabel ? ` · ~${p.cantidadTipicaLabel}/purchase` : ''}
+            ${p.stockRestanteLabel ? ` · Stock: <b style="color:#1A1A1A">${p.stockRestanteLabel}</b>` : ''}
             · ${p.nCompras} purchase${p.nCompras > 1 ? 's' : ''}
             ${p.aprendiendo ? `<span style="color:#C9A96E"> · still learning (${3 - p.nCompras} more needed)</span>` : ''}
           </div>
@@ -907,8 +941,13 @@
 
       const tocaComprar = avgDias ? diasDesde >= avgDias : false;
 
+      const category = ultimaCompra.category || 'units';
+
       patterns[producto] = {
         nombreDisplay: producto.replace(/_/g, ' '),
+        category,
+        cantidadTipicaLabel: cantidadTipica !== null ? formatSize(cantidadTipica, category) : null,
+        stockRestanteLabel: stockRestante !== null ? formatSize(stockRestante, category) : null,
         frecuenciaDias: avgDias,
         cantidadTipica,
         ultimaCompra: ultimaCompra.fecha,
@@ -917,7 +956,7 @@
         diasParaAgotar,
         tocaComprar: tocaComprar || (diasParaAgotar !== null && diasParaAgotar <= 0),
         nCompras: compras.length,
-        aprendiendo: compras.length < 3, // avisa que aún está aprendiendo
+        aprendiendo: compras.length < 3,
       };
     }
 
@@ -1669,16 +1708,23 @@
       if (data) {
         for (const [key, item] of Object.entries(data)) {
           if (!item.done) {
-            // Calcular cantidad real: multiplier × size_number
+            // Parsear size para obtener cantidad real en unidad base
             const multiplier = item.cantidad || 1;
-            const sizeMatch = item.size ? item.size.match(/(\d+(?:\.\d+)?)/) : null;
-            const sizeNum = sizeMatch ? parseFloat(sizeMatch[1]) : 1;
-            const cantidadReal = multiplier * sizeNum;
+            const sizeInfo = parseSize(item.size);
+            const baseQty = sizeInfo ? sizeInfo.base * multiplier : multiplier;
+            const category = sizeInfo ? sizeInfo.category : 'units';
 
-            itemsComprados[item.nombre] = {
-              cantidad: cantidadReal,
-              size: item.size || null,
-            };
+            // Agregar al item, sumando si ya existe (mismo nombre + misma categoría)
+            const existing = itemsComprados[item.nombre];
+            if (existing && existing.category === category) {
+              existing.cantidad += baseQty;
+            } else {
+              itemsComprados[item.nombre] = {
+                cantidad: baseQty,
+                category,
+                size: item.size || null,
+              };
+            }
             await update(ref(db, `listas/${listaId}/items/${key}`), { done: true });
           }
         }
@@ -1718,10 +1764,11 @@
           });
         }
 
-        // Smart learning: registrar esta compra para aprender frecuencia
+        // Smart learning: registrar compra con cantidad base y categoría
         await push(ref(db, `users/${uid}/smartLearning/${nombre.toLowerCase().replace(/\s+/g,'_')}`), {
           fecha: Date.now(),
           cantidad: compra.cantidad,
+          category: compra.category || 'units',
         });
       }
 
