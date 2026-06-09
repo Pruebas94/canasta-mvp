@@ -11,6 +11,7 @@ import os
 
 from scrapers import mercadona, dia, eroski, ahorramas
 from scrapers.distancias import buscar_supermercados_cercanos
+from scrapers.traducciones import traducir
 
 app = FastAPI(title="Canasta MVP")
 
@@ -114,11 +115,12 @@ async def comparar(request: SearchRequest):
     resultado = {}
 
     for item in request.items:
+        item_es = traducir(item)  # Traducir EN->ES si viene en inglés
         futures = [
-            loop.run_in_executor(executor, mercadona.search, item),
-            loop.run_in_executor(executor, dia.search, item),
-            loop.run_in_executor(executor, eroski.search, item),
-            loop.run_in_executor(executor, ahorramas.search, item),
+            loop.run_in_executor(executor, mercadona.search, item_es),
+            loop.run_in_executor(executor, dia.search, item_es),
+            loop.run_in_executor(executor, eroski.search, item_es),
+            loop.run_in_executor(executor, ahorramas.search, item_es),
         ]
         all_results = await asyncio.gather(*futures)
 

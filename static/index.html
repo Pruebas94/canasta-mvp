@@ -366,6 +366,34 @@
   let todosProductos = [];
   let acIndex = -1;
 
+  // Traducciones EN->ES para autocompletado
+  const EN_SUGGESTIONS = {
+    "milk": ["Whole milk", "Semi-skimmed milk", "Skimmed milk", "Lactose-free milk", "Oat milk", "Soy milk"],
+    "eg": ["Eggs", "Free range eggs", "Organic eggs"],
+    "bread": ["Sliced bread", "Wholemeal bread", "Baguette", "Breadcrumbs"],
+    "rice": ["White rice", "Brown rice", "Basmati rice"],
+    "pasta": ["Spaghetti", "Macaroni", "Penne", "Wholemeal pasta"],
+    "cheese": ["Fresh cheese", "Grated cheese", "Sliced cheese", "Cream cheese", "Mozzarella"],
+    "yogurt": ["Natural yogurt", "Greek yogurt", "Strawberry yogurt", "Lactose-free yogurt"],
+    "chicken": ["Chicken breast", "Chicken thighs", "Whole chicken"],
+    "beef": ["Beef steak", "Minced meat"],
+    "pork": ["Pork loin", "Pork ribs", "Bacon"],
+    "ham": ["Cooked ham", "Serrano ham"],
+    "fish": ["Hake", "Salmon", "Tuna", "Cod", "Sardines"],
+    "fruit": ["Apple", "Orange", "Banana", "Pear", "Strawberries", "Grapes", "Lemon", "Kiwi"],
+    "vegetable": ["Tomato", "Onion", "Garlic", "Potato", "Carrot", "Lettuce", "Broccoli", "Spinach"],
+    "water": ["Still water", "Sparkling water"],
+    "juice": ["Orange juice", "Apple juice"],
+    "coffee": ["Ground coffee", "Instant coffee", "Coffee capsules"],
+    "tea": ["Black tea", "Green tea", "Chamomile"],
+    "oil": ["Olive oil", "Extra virgin olive oil", "Sunflower oil"],
+    "sugar": ["White sugar", "Brown sugar", "Honey"],
+    "chocolate": ["Dark chocolate", "Milk chocolate", "White chocolate"],
+    "beer": ["Beer", "Non-alcoholic beer"],
+    "wine": ["Red wine", "White wine"],
+    "chips": ["Crisps / Chips", "Almonds", "Peanuts", "Walnuts"],
+  };
+
   fetch('/static/productos.json')
     .then(r => r.json())
     .then(data => { todosProductos = data; });
@@ -376,18 +404,31 @@
     if (!val || val.length < 2) { list.style.display = 'none'; return; }
 
     const q = val.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const matches = todosProductos
-      .filter(p => {
-        const name = p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        return name.includes(q);
-      })
-      .sort((a, b) => {
-        const na = a.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        const nb = b.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        // Priorizar los que empiezan por la búsqueda
-        return (na.startsWith(q) ? 0 : 1) - (nb.startsWith(q) ? 0 : 1) || na.length - nb.length;
-      })
-      .slice(0, 8);
+    let matches = [];
+
+    if (lang === 'en') {
+      // Sugerencias en inglés
+      const enMatches = [];
+      for (const [key, suggestions] of Object.entries(EN_SUGGESTIONS)) {
+        suggestions
+          .filter(s => s.toLowerCase().includes(q))
+          .forEach(s => enMatches.push({ name: s, category: '' }));
+      }
+      matches = enMatches.length > 0 ? enMatches.slice(0, 8) :
+        todosProductos.filter(p => p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q)).slice(0, 8);
+    } else {
+      matches = todosProductos
+        .filter(p => {
+          const name = p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+          return name.includes(q);
+        })
+        .sort((a, b) => {
+          const na = a.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+          const nb = b.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+          return (na.startsWith(q) ? 0 : 1) - (nb.startsWith(q) ? 0 : 1) || na.length - nb.length;
+        })
+        .slice(0, 8);
+    }
 
     if (!matches.length) { list.style.display = 'none'; return; }
 
