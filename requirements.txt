@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+curl-cffi
+beautifulsoup4
+python-multipart
