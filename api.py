@@ -1,20 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from tinydb import TinyDB, Query
+import uuid
+import os
 
 from scrapers import mercadona, dia, eroski, ahorramas
 
 app = FastAPI(title="Canasta MVP")
-
-@app.on_event("startup")
-async def startup_event():
-    # Pre-cargar catalogo de Mercadona en background al arrancar el servidor
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, mercadona._load_cache)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,12 +24,79 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 executor = ThreadPoolExecutor(max_workers=4)
 
+# Base de datos de listas
+os.makedirs("data", exist_ok=True)
+db = TinyDB("data/listas.json")
+listas = db.table("listas")
+Lista = Query()
+
+# ── MODELOS ──────────────────────────────────────────────
+
 class SearchRequest(BaseModel):
     items: list[str]
+
+class CrearListaRequest(BaseModel):
+    nombre: str
+    creador: str = "Anónimo"
+
+class ActualizarListaRequest(BaseModel):
+    items: list[str]
+    editor: str = "Anónimo"
+
+# ── STARTUP ──────────────────────────────────────────────
+
+@app.on_event("startup")
+async def startup_event():
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, mercadona._load_cache)
+
+# ── RUTAS PRINCIPALES ────────────────────────────────────
 
 @app.get("/")
 def root():
     return FileResponse("static/index.html")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+# ── LISTAS COLABORATIVAS ─────────────────────────────────
+
+@app.post("/listas")
+def crear_lista(req: CrearListaRequest):
+    lista_id = str(uuid.uuid4())[:8]
+    lista = {
+        "id": lista_id,
+        "nombre": req.nombre,
+        "creador": req.creador,
+        "items": [],
+        "historial": [f"{req.creador} creó la lista"],
+    }
+    listas.insert(lista)
+    return lista
+
+@app.get("/listas/{lista_id}")
+def obtener_lista(lista_id: str):
+    resultado = listas.search(Lista.id == lista_id)
+    if not resultado:
+        raise HTTPException(status_code=404, detail="Lista no encontrada")
+    return resultado[0]
+
+@app.put("/listas/{lista_id}")
+def actualizar_lista(lista_id: str, req: ActualizarListaRequest):
+    resultado = listas.search(Lista.id == lista_id)
+    if not resultado:
+        raise HTTPException(status_code=404, detail="Lista no encontrada")
+    lista = resultado[0]
+    historial = lista.get("historial", [])
+    historial.append(f"{req.editor} actualizó la lista")
+    listas.update(
+        {"items": req.items, "historial": historial[-10:]},
+        Lista.id == lista_id
+    )
+    return {**lista, "items": req.items, "historial": historial[-10:]}
+
+# ── COMPARADOR ───────────────────────────────────────────
 
 @app.post("/comparar")
 async def comparar(request: SearchRequest):
@@ -40,7 +104,6 @@ async def comparar(request: SearchRequest):
     resultado = {}
 
     for item in request.items:
-        # Buscar en todos los supermercados en paralelo
         futures = [
             loop.run_in_executor(executor, mercadona.search, item),
             loop.run_in_executor(executor, dia.search, item),
@@ -49,7 +112,6 @@ async def comparar(request: SearchRequest):
         ]
         all_results = await asyncio.gather(*futures)
 
-        # Agrupar por supermercado - tomar el mas barato de cada uno
         por_super = {}
         for products in all_results:
             for p in products:
@@ -62,7 +124,6 @@ async def comparar(request: SearchRequest):
             "mejor_precio": min(por_super.values(), key=lambda x: x["price"]) if por_super else None,
         }
 
-    # Calcular canasta total por supermercado
     totales = {}
     for item_data in resultado.values():
         for super_name, product in item_data["supermercados"].items():
@@ -73,7 +134,3 @@ async def comparar(request: SearchRequest):
         "totales": totales,
         "mejor_canasta": min(totales, key=totales.get) if totales else None,
     }
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}

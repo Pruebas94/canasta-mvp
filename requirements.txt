@@ -4,3 +4,4 @@ requests
 curl-cffi
 beautifulsoup4
 python-multipart
+tinydb
