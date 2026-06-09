@@ -222,7 +222,7 @@
       <p style="font-size: 13px; color: #C9A96E; letter-spacing: 1px; font-style: italic; margin-bottom: 16px;">find anything, anywhere</p>
       <p data-i18n="heroSub" style="font-size:14px;">Crea una lista compartida y encuentra la canasta más barata.</p>
     </div>
-    <div class="card">
+    <div id="nombre-card" class="card">
       <h2 data-i18n="yourName">Tu nombre</h2>
       <input id="input-nombre" class="nick-input" type="text" placeholder="ej: María, Nicolás..." data-i18n-placeholder="namePlaceholder" />
       <p class="nick-hint" data-i18n="nameHint">Para que tus compañeros sepan quién editó la lista</p>
@@ -624,11 +624,16 @@
       // Mostrar botón mis listas
       const btnML = document.getElementById('btn-mis-listas');
       if (btnML) btnML.style.display = 'block';
+      // Ocultar card de nombre (ya sabemos quién es)
+      const nombreCard = document.getElementById('nombre-card');
+      if (nombreCard) nombreCard.style.display = 'none';
     } else {
       label.textContent = T[lang].signIn;
       avatar.style.display = 'none';
       const btnML = document.getElementById('btn-mis-listas');
       if (btnML) btnML.style.display = 'none';
+      const nombreCard = document.getElementById('nombre-card');
+      if (nombreCard) nombreCard.style.display = 'block';
     }
   });
 
