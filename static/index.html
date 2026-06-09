@@ -772,20 +772,24 @@
         const tocaComprar = stockRestante <= 0 || (ultimaCompra === 0);
         const porcentaje = stockInicial > 0 ? Math.min((stockRestante / stockInicial) * 100, 100) : 0;
 
+        const fechaUltima = ultimaCompra ? new Date(ultimaCompra).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) : '–';
+
         return `
           <div style="padding:10px 0;border-bottom:1px solid #F5F0EA">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
               <span style="font-weight:600;font-size:14px">${h.producto}</span>
-              <div style="display:flex;gap:6px;align-items:center">
+              <div style="display:flex;gap:8px;align-items:center">
                 ${tocaComprar
                   ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">🛒 Buy now!</span>`
                   : `<span style="font-size:12px;color:#aaa">${diasRestantesStock}d left</span>`}
+                <button onclick="editarStock('${key}', '${h.producto}', '${h.unidad}', ${stockRestante.toFixed(1)})" style="background:none;border:none;color:#C9A96E;cursor:pointer;font-size:12px;font-weight:600">Edit</button>
                 <button onclick="eliminarHabito('${key}')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:14px">✕</button>
               </div>
             </div>
             <div style="font-size:12px;color:#888;margin-bottom:2px">
               Consume: ${h.cantidad} ${h.unidad}/${h.periodo}
-              ${h.stockActual > 0 ? `· Stock: <b style="color:#1A1A1A">${stockRestante.toFixed(1)} ${h.unidad}</b>` : '· No stock recorded yet'}
+              ${h.stockActual > 0 ? `· Stock: <b style="color:#1A1A1A">${stockRestante.toFixed(1)} ${h.unidad}</b>` : '· No stock yet'}
+              ${ultimaCompra ? ` · Last bought: ${fechaUltima}` : ''}
             </div>
             <div style="background:#F5F0EA;border-radius:20px;height:6px;overflow:hidden;margin:6px 0">
               <div style="background:${stockRestante < h.cantidad ? '#C9A96E' : '#D4C9B8'};height:100%;width:${porcentaje}%;border-radius:20px;transition:width 0.5s"></div>
@@ -821,6 +825,20 @@
   window.marcarComprado = async (key) => {
     if (!currentUser) return;
     await update(ref(db, `users/${currentUser.uid}/habitos/${key}`), { ultimaCompra: Date.now() });
+    cargarHabitos();
+  };
+
+  window.editarStock = async (key, producto, unidad, stockActual) => {
+    const nuevo = prompt(`How many ${unidad} of ${producto} do you have right now?`, stockActual);
+    if (nuevo === null) return;
+    const cantidad = parseFloat(nuevo);
+    if (isNaN(cantidad) || cantidad < 0) { alert('Invalid number'); return; }
+
+    if (!currentUser) return;
+    await update(ref(db, `users/${currentUser.uid}/habitos/${key}`), {
+      stockActual: cantidad,
+      ultimaCompra: Date.now(),
+    });
     cargarHabitos();
   };
 
