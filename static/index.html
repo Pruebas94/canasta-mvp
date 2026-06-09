@@ -199,6 +199,73 @@
     </div>
   </div>
 
+  <!-- PERFIL -->
+  <div id="screen-profile" class="screen">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <img id="profile-photo" style="width:56px;height:56px;border-radius:50%;display:none" />
+      <div>
+        <div id="profile-name" style="font-size:20px;font-weight:700;font-family:Georgia,serif"></div>
+        <div id="profile-email" style="font-size:13px;color:#aaa"></div>
+      </div>
+    </div>
+
+    <!-- Ahorro total -->
+    <div id="profile-savings" class="card" style="text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Total saved with Foocation</div>
+      <div id="profile-total" style="font-size:40px;font-weight:800;color:#C9A96E">0.00€</div>
+      <div id="profile-count" style="font-size:13px;color:#aaa;margin-top:4px">0 purchases</div>
+    </div>
+
+    <!-- Comportamiento de consumo -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0">🔄 My consumption habits</h2>
+        <button onclick="abrirAddHabito()" style="background:#1A1A1A;color:#F5F0EA;border:none;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer">+ Add</button>
+      </div>
+      <div id="habitos-list">
+        <div style="color:#bbb;font-size:13px;text-align:center;padding:12px">No habits yet. Add one!</div>
+      </div>
+      <!-- Form añadir hábito -->
+      <div id="add-habito-form" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #F5F0EA">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="habito-producto" type="text" placeholder="Product (e.g. eggs)" style="flex:1;padding:10px;border:2px solid #E8E2D9;border-radius:10px;font-size:14px;outline:none" />
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+          <span style="font-size:13px;color:#888">I consume</span>
+          <input id="habito-cantidad" type="number" value="1" min="1" style="width:60px;padding:8px;border:2px solid #E8E2D9;border-radius:10px;font-size:14px;text-align:center;outline:none" />
+          <select id="habito-unidad" style="padding:8px;border:2px solid #E8E2D9;border-radius:10px;font-size:13px;outline:none;background:#FDFAF7">
+            <option>units</option>
+            <option>L</option>
+            <option>ml</option>
+            <option>g</option>
+            <option>kg</option>
+          </select>
+          <span style="font-size:13px;color:#888">per</span>
+          <select id="habito-periodo" style="padding:8px;border:2px solid #E8E2D9;border-radius:10px;font-size:13px;outline:none;background:#FDFAF7">
+            <option value="day">day</option>
+            <option value="week" selected>week</option>
+            <option value="month">month</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="guardarHabito()" style="flex:1;padding:10px;background:#1A1A1A;color:#F5F0EA;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Save</button>
+          <button onclick="document.getElementById('add-habito-form').style.display='none'" style="padding:10px 16px;background:#F0EBE3;border:none;border-radius:10px;font-size:14px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historial de compras -->
+    <div class="card">
+      <h2>📋 Purchase history</h2>
+      <div id="profile-history">
+        <div style="color:#bbb;font-size:13px;text-align:center;padding:12px">No purchases yet</div>
+      </div>
+    </div>
+
+    <button onclick="doSignOut()" style="width:100%;padding:14px;background:#F0EBE3;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;color:#1A1A1A;margin-bottom:10px">Sign out</button>
+    <button onclick="mostrarScreen('screen-home')" class="btn btn-secondary">← Back</button>
+  </div>
+
   <!-- LISTA -->
   <div id="screen-lista" class="screen">
     <div class="share-box">
@@ -457,41 +524,9 @@
   };
 
   window.showProfileModal = () => {
-    const existing = document.getElementById('profile-modal');
-    if (existing) { existing.remove(); return; }
-
-    const modal = document.createElement('div');
-    modal.id = 'profile-modal';
-    modal.style.cssText = `
-      position:fixed; top:60px; right:16px; background:white;
-      border-radius:16px; padding:20px; box-shadow:0 8px 32px rgba(0,0,0,0.15);
-      z-index:1000; min-width:220px; border:1px solid #E8E2D9;
-    `;
-
-    // Cargar historial de ahorro
-    let savingsHTML = `<div style="color:#bbb;font-size:13px;text-align:center;padding:8px 0">Loading savings...</div>`;
-
-    modal.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        ${currentUser.photoURL ? `<img src="${currentUser.photoURL}" style="width:36px;height:36px;border-radius:50%"/>` : ''}
-        <div>
-          <div style="font-weight:700;font-size:15px">${currentUser.displayName}</div>
-          <div style="font-size:12px;color:#aaa">${currentUser.email}</div>
-        </div>
-      </div>
-      <div id="savings-summary" style="background:#FAF6F0;border-radius:12px;padding:12px;margin-bottom:12px">
-        ${savingsHTML}
-      </div>
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Recent purchases</div>
-        <div id="history-list"><div style="color:#bbb;font-size:12px;text-align:center;padding:8px">Loading...</div></div>
-      </div>
-      <button onclick="doSignOut()" style="width:100%;padding:10px;background:#F0EBE3;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#1A1A1A">
-        ${T[lang].signOut}
-      </button>
-    `;
-
-    document.body.appendChild(modal);
+    mostrarScreen('screen-profile');
+    cargarPerfil();
+  };
 
     // Cargar ahorro + historial desde Firebase
     if (currentUser) {
@@ -559,7 +594,131 @@
 
   window.doSignOut = async () => {
     await signOut(auth);
-    document.getElementById('profile-modal')?.remove();
+    mostrarScreen('screen-home');
+  };
+
+  // ── Perfil ────────────────────────────────────────────
+  function cargarPerfil() {
+    if (!currentUser) return;
+    const uid = currentUser.uid;
+
+    // Info usuario
+    document.getElementById('profile-name').textContent = currentUser.displayName || '';
+    document.getElementById('profile-email').textContent = currentUser.email || '';
+    if (currentUser.photoURL) {
+      const img = document.getElementById('profile-photo');
+      img.src = currentUser.photoURL;
+      img.style.display = 'block';
+    }
+
+    // Ahorro total
+    onValue(ref(db, `users/${uid}/savings`), snap => {
+      const data = snap.val() || { total: 0, count: 0 };
+      document.getElementById('profile-total').textContent = `${(data.total || 0).toFixed(2)}€`;
+      document.getElementById('profile-count').textContent = `${data.count || 0} purchases`;
+    }, { onlyOnce: true });
+
+    // Historial
+    onValue(ref(db, `users/${uid}/history`), snap => {
+      const el = document.getElementById('profile-history');
+      if (!el) return;
+      const data = snap.val();
+      if (!data) { el.innerHTML = `<div style="color:#bbb;font-size:13px;text-align:center;padding:12px">No purchases yet</div>`; return; }
+      const entries = Object.values(data).sort((a,b) => b.date - a.date).slice(0, 10);
+      el.innerHTML = entries.map(e => {
+        const date = new Date(e.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+        return `
+          <div style="padding:10px 0;border-bottom:1px solid #F5F0EA">
+            <div style="display:flex;justify-content:space-between">
+              <span style="color:#888;font-size:13px">${date}</span>
+              <span style="color:#C9A96E;font-weight:700">-${e.saved?.toFixed(2)}€ saved</span>
+            </div>
+            <div style="font-size:14px;color:#1A1A1A;margin-top:2px">${(e.items||[]).join(', ')}</div>
+            <div style="font-size:12px;color:#aaa">@ ${e.supermarket} · ${e.total?.toFixed(2)}€ total</div>
+          </div>`;
+      }).join('');
+    }, { onlyOnce: true });
+
+    // Hábitos
+    cargarHabitos();
+  }
+
+  // ── Hábitos de consumo ────────────────────────────────
+  function cargarHabitos() {
+    if (!currentUser) return;
+    onValue(ref(db, `users/${currentUser.uid}/habitos`), snap => {
+      const el = document.getElementById('habitos-list');
+      if (!el) return;
+      const data = snap.val();
+      if (!data) { el.innerHTML = `<div style="color:#bbb;font-size:13px;text-align:center;padding:12px">No habits yet. Add one!</div>`; return; }
+
+      const ahora = Date.now();
+      const habitos = Object.entries(data);
+      el.innerHTML = habitos.map(([key, h]) => {
+        // Calcular si toca comprar
+        const periodoMs = { day: 86400000, week: 604800000, month: 2592000000 };
+        const intervalo = periodoMs[h.periodo] || periodoMs.week;
+        const ultimaCompra = h.ultimaCompra || 0;
+        const transcurrido = ahora - ultimaCompra;
+        const porcentaje = Math.min((transcurrido / intervalo) * 100, 100);
+        const tocaComprar = transcurrido >= intervalo;
+        const diasRestantes = Math.max(0, Math.round((intervalo - transcurrido) / 86400000));
+
+        return `
+          <div style="padding:10px 0;border-bottom:1px solid #F5F0EA">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-weight:600;font-size:14px">${h.producto}</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                ${tocaComprar ? `<span style="background:#FEF3C7;color:#D97706;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">🛒 Buy now!</span>` : `<span style="font-size:12px;color:#aaa">${diasRestantes}d left</span>`}
+                <button onclick="eliminarHabito('${key}')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:14px">✕</button>
+              </div>
+            </div>
+            <div style="font-size:12px;color:#888;margin-bottom:6px">${h.cantidad} ${h.unidad} / ${h.periodo}</div>
+            <div style="background:#F5F0EA;border-radius:20px;height:6px;overflow:hidden">
+              <div style="background:${tocaComprar ? '#C9A96E' : '#D4C9B8'};height:100%;width:${porcentaje}%;border-radius:20px;transition:width 0.3s"></div>
+            </div>
+            ${tocaComprar ? `
+              <button onclick="marcarComprado('${key}')" style="margin-top:8px;width:100%;padding:8px;background:#1A1A1A;color:#F5F0EA;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+                ✓ Mark as bought
+              </button>` : ''}
+          </div>`;
+      }).join('');
+    }, { onlyOnce: true });
+  }
+
+  window.abrirAddHabito = () => {
+    const form = document.getElementById('add-habito-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  };
+
+  window.guardarHabito = async () => {
+    if (!currentUser) return;
+    const producto = document.getElementById('habito-producto').value.trim();
+    const cantidad = document.getElementById('habito-cantidad').value;
+    const unidad = document.getElementById('habito-unidad').value;
+    const periodo = document.getElementById('habito-periodo').value;
+    if (!producto) return;
+
+    await push(ref(db, `users/${currentUser.uid}/habitos`), {
+      producto, cantidad: parseFloat(cantidad), unidad, periodo,
+      ultimaCompra: 0, creadoEn: Date.now()
+    });
+
+    document.getElementById('habito-producto').value = '';
+    document.getElementById('add-habito-form').style.display = 'none';
+    cargarHabitos();
+  };
+
+  window.marcarComprado = async (key) => {
+    if (!currentUser) return;
+    await update(ref(db, `users/${currentUser.uid}/habitos/${key}`), { ultimaCompra: Date.now() });
+    cargarHabitos();
+  };
+
+  window.eliminarHabito = async (key) => {
+    if (!currentUser) return;
+    await remove(ref(db, `users/${currentUser.uid}/habitos/${key}`));
+    cargarHabitos();
   };
 
   // Guardar ahorro cada vez que se compara
