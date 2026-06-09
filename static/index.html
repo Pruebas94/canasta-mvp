@@ -1667,16 +1667,20 @@
                     const p = d.supermercados[s];
                     if (!p) return `<td style="padding:10px 8px;text-align:right;color:#ccc">–</td>`;
                     const isBest = s === d.mejor_precio?.supermarket;
+                    const warning = d.warnings?.[s];
+                    const warningLabel = warning === 'smaller' ? 'Smaller size' : warning === 'larger' ? 'Larger size' : warning === 'approx' ? 'Different size' : null;
                     return `
                       <td style="padding:10px 8px;text-align:right;${isBest ? 'background:#FAF0E0' : ''}">
-                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap">
                           <span style="font-weight:${isBest ? '700' : '600'};color:${isBest ? '#C9A96E' : '#1A1A1A'}">
                             ${p.price.toFixed(2)}€
                           </span>
                           ${p.on_sale ? `<span style="background:#DC2626;color:white;font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;letter-spacing:0.3px" title="On promotion">SALE</span>` : ''}
+                          ${warningLabel ? `<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px" title="Different size than requested - check price per unit">⚠ ${warningLabel}</span>` : ''}
                         </div>
                         ${p.previous_price && p.previous_price > p.price ? `<div style="font-size:10px;color:#DC2626;text-decoration:line-through">${p.previous_price.toFixed(2)}€</div>` : ''}
-                        ${p.unit_price ? `<div style="font-size:10px;color:#aaa">${p.unit_price}${p.unit_label}</div>` : ''}
+                        ${p.unit_price ? `<div style="font-size:10px;color:${isBest ? '#C9A96E' : '#aaa'};font-weight:${isBest ? '700' : '400'}">${p.unit_price}${p.unit_label}</div>` : ''}
+                        ${p.size_label ? `<div style="font-size:9px;color:#bbb">${p.size_label}</div>` : ''}
                       </td>`;
                   }).join('')}
                 </tr>`;
