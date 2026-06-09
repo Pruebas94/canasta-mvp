@@ -181,20 +181,16 @@
   <!-- LISTA -->
   <div id="screen-lista" class="screen">
     <div class="share-box">
-      <p id="share-box-title">🔗 Comparte esta lista</p>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <div style="text-align:center">
-          <div style="font-size:11px;color:#16a34a;font-weight:600;margin-bottom:4px">CÓDIGO</div>
-          <div id="codigo-lista" style="font-size:26px;font-weight:800;letter-spacing:3px;color:#16a34a;background:white;border-radius:10px;padding:8px 14px;cursor:pointer" onclick="copiarCodigo()" title="Click para copiar"></div>
-        </div>
-        <div style="color:#86efac;font-size:20px">|</div>
-        <div style="flex:1;font-size:13px;color:#16a34a">
-          Comparte el código o el link — cualquiera puede unirse
-        </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:16px">🔗</span>
+        <div id="codigo-lista" style="font-size:22px;font-weight:800;letter-spacing:4px;color:#16a34a;cursor:pointer;flex:1" onclick="copiarCodigo()" title="Click para copiar"></div>
+        <button id="copy-link-btn" onclick="copiarCodigo()" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer">Copiar</button>
       </div>
-      <div class="share-url">
-        <input id="share-url-input" type="text" readonly />
-        <button id="copy-link-btn" onclick="copiarLink()">Copiar link</button>
+      <div id="share-url-input-wrap" style="display:none;margin-top:10px">
+        <input id="share-url-input" type="text" readonly style="width:100%;padding:8px 12px;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#555" />
+      </div>
+      <div style="margin-top:6px">
+        <button onclick="toggleLink()" style="background:none;border:none;color:#86efac;font-size:12px;cursor:pointer;padding:0">ver link →</button>
       </div>
     </div>
 
@@ -674,22 +670,21 @@
 
   window.copiarLink = () => {
     const url = document.getElementById('share-url-input').value;
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = event.target;
-      btn.textContent = '✓ Copiado';
-      setTimeout(() => btn.textContent = T[lang].copyLink, 2000);
-    });
+    navigator.clipboard.writeText(url);
   };
 
   window.copiarCodigo = () => {
     const codigo = document.getElementById('codigo-lista').textContent;
+    const btn = document.getElementById('copy-link-btn');
     navigator.clipboard.writeText(codigo).then(() => {
-      const el = document.getElementById('codigo-lista');
-      const original = el.textContent;
-      el.textContent = '✓';
-      el.style.fontSize = '20px';
-      setTimeout(() => { el.textContent = original; el.style.fontSize = '26px'; }, 1500);
+      btn.textContent = '✓';
+      setTimeout(() => btn.textContent = 'Copiar', 1500);
     });
+  };
+
+  window.toggleLink = () => {
+    const wrap = document.getElementById('share-url-input-wrap');
+    wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
   };
 
   // ── DISTANCIAS ────────────────────────────────────────
