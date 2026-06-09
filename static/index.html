@@ -975,11 +975,23 @@
       return;
     }
 
+    // Solo el más cercano de cada marca
+    const porMarca = {};
+    supermercados.forEach(s => {
+      if (!porMarca[s.nombre]) porMarca[s.nombre] = s;
+    });
+    const unicos = Object.values(porMarca).sort((a, b) => a.distancia_m - b.distancia_m);
+
     const mapsUrl = (lat, lon) => `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=17/${lat}/${lon}`;
 
     container.innerHTML = `
-      <p class="cercanos-header">📍 Supermercados cercanos a ti</p>
-      ${supermercados.map((s, i) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <p class="cercanos-header" style="margin-bottom:0">📍 Nearby supermarkets</p>
+        <button onclick="ocultarCercanos()" style="background:none;border:none;color:#aaa;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:8px;background:#F5F0EA">
+          Hide ✕
+        </button>
+      </div>
+      ${unicos.map(s => `
         <div class="super-cercano">
           <div class="super-cercano-top">
             <span style="font-size:22px">${getEmoji(s.nombre)}</span>
@@ -991,18 +1003,18 @@
             <span class="tiempo-chip">🚶 ${s.tiempo_andando}</span>
             <span class="tiempo-chip">🚗 ${s.tiempo_coche}</span>
             <a href="${mapsUrl(s.lat, s.lon)}" target="_blank" style="text-decoration:none">
-              <span class="tiempo-chip" style="color:#3b82f6">🗺 Ver en mapa</span>
+              <span class="tiempo-chip" style="color:#C9A96E">🗺 Map</span>
             </a>
           </div>
           <div class="delivery-opciones">
-            <h4>Opciones de entrega</h4>
+            <h4>Delivery options</h4>
             ${s.delivery.map(d => `
               <div class="delivery-row">
                 <span>${d.emoji}</span>
                 <span class="plat-name">${d.plataforma}</span>
                 <span class="plat-tiempo">${d.tiempo_estimado}</span>
                 <span class="plat-tarifa ${d.tarifa === 0 ? 'gratis' : ''}">
-                  ${d.tarifa === 0 ? 'Gratis*' : d.tarifa.toFixed(2) + '€'}
+                  ${d.tarifa === 0 ? 'Free*' : d.tarifa.toFixed(2) + '€'}
                 </span>
               </div>
               ${d.nota ? `<div class="plat-nota" style="padding:2px 0 6px 28px">${d.nota}</div>` : ''}
@@ -1011,9 +1023,16 @@
         </div>
       `).join('')}
       <p style="font-size:11px;color:#bbb;text-align:center;margin-top:8px">
-        * Tiempos y tarifas de delivery son estimados. Distancias vía OpenStreetMap.
+        * Delivery times and fees are estimates.
       </p>`;
   }
+
+  window.ocultarCercanos = () => {
+    const container = document.getElementById('cercanos-container');
+    container.style.display = 'none';
+    const btn = document.getElementById('btn-distancia');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  };
 
   function getEmoji(nombre) {
     const emojis = { Mercadona: '🟢', DIA: '🔴', Eroski: '🔵', Ahorramas: '🟠', Carrefour: '🔷', Lidl: '🟡', Aldi: '⬛', Alcampo: '🟣' };
