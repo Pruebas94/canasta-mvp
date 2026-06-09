@@ -5,139 +5,145 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Canasta — Comparador de Supermercados</title>
   <style>
+    /* ── Foocation Brand Colors ──────────────────────────
+       --bg:     #F5F0EA  beige cálido
+       --dark:   #1A1A1A  casi negro
+       --gold:   #C9A96E  dorado
+       --gold2:  #B8935A  dorado oscuro (hover)
+       --card:   #FFFFFF
+       --border: #E8E2D9
+    ──────────────────────────────────────────────────── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F0EA; color: #1A1A1A; }
 
-    header { background: #2ecc71; color: white; padding: 16px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    header h1 { font-size: 20px; font-weight: 700; flex: 1; }
-    .header-list-name { font-size: 13px; opacity: 0.85; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .lang-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; cursor: pointer; }
-    .lang-btn:hover { background: rgba(255,255,255,0.35); }
+    header { background: #1A1A1A; color: #F5F0EA; padding: 16px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    header h1 { font-size: 20px; font-weight: 700; flex: 1; letter-spacing: 0.5px; }
+    .header-list-name { font-size: 13px; opacity: 0.7; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lang-btn { background: rgba(201,169,110,0.2); border: 1px solid rgba(201,169,110,0.4); color: #C9A96E; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; cursor: pointer; }
+    .lang-btn:hover { background: rgba(201,169,110,0.35); }
 
     .container { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
 
-    .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-    .card h2 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #E8E2D9; }
+    .card h2 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Home */
     .hero { text-align: center; padding: 32px 16px 24px; }
-    .hero .emoji { font-size: 56px; }
-    .hero h2 { font-size: 22px; font-weight: 700; margin: 12px 0 8px; }
+    .hero .logo-pin { font-size: 52px; }
+    .hero h2 { font-size: 22px; font-weight: 700; margin: 12px 0 8px; color: #1A1A1A; }
     .hero p { color: #888; font-size: 15px; }
 
     .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: all 0.15s; }
     .btn:active { transform: scale(0.98); }
-    .btn-primary { background: #2ecc71; color: white; }
-    .btn-primary:hover { background: #27ae60; }
-    .btn-secondary { background: #f0f0f0; color: #333; }
-    .btn-secondary:hover { background: #e0e0e0; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-primary { background: #1A1A1A; color: #F5F0EA; }
+    .btn-primary:hover { background: #2d2d2d; }
+    .btn-secondary { background: #F0EBE3; color: #1A1A1A; border: 1px solid #E8E2D9; }
+    .btn-secondary:hover { background: #E8E2D9; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
     .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
-    .input-group input { flex: 1; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; }
-    .input-group input:focus { border-color: #2ecc71; }
-    .input-group button { background: #2ecc71; color: white; border: none; border-radius: 12px; padding: 12px 18px; font-size: 20px; cursor: pointer; }
+    .input-group input { flex: 1; padding: 12px 14px; border: 2px solid #E8E2D9; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #FDFAF7; }
+    .input-group input:focus { border-color: #C9A96E; }
+    .input-group button { background: #C9A96E; color: white; border: none; border-radius: 12px; padding: 12px 18px; font-size: 20px; cursor: pointer; }
 
-    .nick-input { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; }
-    .nick-input:focus { border-color: #2ecc71; }
+    .nick-input { width: 100%; padding: 12px 14px; border: 2px solid #E8E2D9; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #FDFAF7; }
+    .nick-input:focus { border-color: #C9A96E; }
     .nick-hint { font-size: 13px; color: #aaa; margin-top: 6px; }
 
     /* Lista de items */
     .items-list { list-style: none; }
-    .items-list li { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid #f5f5f5; font-size: 15px; gap: 10px; }
+    .items-list li { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid #F5F0EA; font-size: 15px; gap: 10px; }
     .items-list li:last-child { border-bottom: none; }
-    .items-list li .check-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #d1d5db; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
-    .items-list li .check-btn.done { background: #2ecc71; border-color: #2ecc71; color: white; }
+    .items-list li .check-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #D4C9B8; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+    .items-list li .check-btn.done { background: #C9A96E; border-color: #C9A96E; color: white; }
     .items-list li .item-info { flex: 1; }
     .items-list li .item-name { display: block; transition: all 0.2s; font-weight: 500; }
-    .items-list li .item-name.done { text-decoration: line-through; color: #aaa; }
+    .items-list li .item-name.done { text-decoration: line-through; color: #bbb; }
     .items-list li .item-meta { font-size: 11px; color: #bbb; }
-    .items-list li .remove-btn { background: none; border: none; color: #d1d5db; font-size: 18px; cursor: pointer; padding: 0 4px; }
+    .items-list li .remove-btn { background: none; border: none; color: #D4C9B8; font-size: 18px; cursor: pointer; padding: 0 4px; }
     .items-list li .remove-btn:hover { color: #e74c3c; }
     /* Cantidad */
     .qty-control { display: flex; align-items: center; gap: 6px; }
-    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #e0e0e0; background: white; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #555; transition: all 0.15s; flex-shrink: 0; }
-    .qty-btn:hover { border-color: #2ecc71; color: #2ecc71; }
-    .qty-btn.minus:hover { border-color: #f87171; color: #f87171; }
-    .qty-num { font-size: 15px; font-weight: 700; min-width: 20px; text-align: center; color: #1a1a1a; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #E8E2D9; background: white; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #888; transition: all 0.15s; flex-shrink: 0; }
+    .qty-btn:hover { border-color: #C9A96E; color: #C9A96E; }
+    .qty-btn.minus:hover { border-color: #e74c3c; color: #e74c3c; }
+    .qty-num { font-size: 15px; font-weight: 700; min-width: 20px; text-align: center; color: #1A1A1A; }
     /* Input con cantidad */
     .add-item-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
-    .add-item-row input { flex: 1; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; }
-    .add-item-row input:focus { border-color: #2ecc71; }
+    .add-item-row input { flex: 1; padding: 12px 14px; border: 2px solid #E8E2D9; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #FDFAF7; }
+    .add-item-row input:focus { border-color: #C9A96E; }
     .qty-input { width: 56px !important; flex: none !important; text-align: center; font-weight: 700; }
-    .add-item-row button.add-btn { background: #2ecc71; color: white; border: none; border-radius: 12px; padding: 12px 18px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+    .add-item-row button.add-btn { background: #1A1A1A; color: #F5F0EA; border: none; border-radius: 12px; padding: 12px 18px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
     /* Autocomplete */
     .autocomplete-wrap { position: relative; flex: 1; }
-    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; max-height: 260px; overflow-y: auto; margin-top: 4px; border: 1px solid #e0e0e0; }
-    .autocomplete-item { padding: 11px 14px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f5f5f5; }
+    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.10); z-index: 100; max-height: 260px; overflow-y: auto; margin-top: 4px; border: 1px solid #E8E2D9; }
+    .autocomplete-item { padding: 11px 14px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #F5F0EA; }
     .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover, .autocomplete-item.active { background: #f0fdf4; }
-    .autocomplete-item .item-cat { font-size: 11px; color: #aaa; margin-left: auto; }
-    .autocomplete-item mark { background: none; color: #2ecc71; font-weight: 700; }
+    .autocomplete-item:hover, .autocomplete-item.active { background: #FAF6F0; }
+    .autocomplete-item .item-cat { font-size: 11px; color: #bbb; margin-left: auto; }
+    .autocomplete-item mark { background: none; color: #C9A96E; font-weight: 700; }
 
     .empty-msg { text-align: center; padding: 20px; color: #bbb; font-size: 14px; list-style: none; }
 
     /* Indicador online */
-    .online-dot { width: 8px; height: 8px; background: #2ecc71; border-radius: 50%; display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
+    .online-dot { width: 8px; height: 8px; background: #C9A96E; border-radius: 50%; display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .sync-status { font-size: 12px; color: #aaa; display: flex; align-items: center; margin-top: 8px; }
 
     /* Share box */
-    .share-box { background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-    .share-box p { font-size: 13px; color: #16a34a; font-weight: 600; margin-bottom: 8px; }
+    .share-box { background: #FAF6F0; border: 2px solid #E8D9C4; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
     .share-url { display: flex; gap: 8px; }
-    .share-url input { flex: 1; padding: 8px 12px; border: 1px solid #86efac; border-radius: 8px; font-size: 13px; background: white; color: #333; }
-    .share-url button { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .share-url input { flex: 1; padding: 8px 12px; border: 1px solid #E8D9C4; border-radius: 8px; font-size: 13px; background: white; color: #555; }
 
     /* Resultados */
-    .ganador-badge { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border-radius: 16px; padding: 20px; margin-bottom: 14px; text-align: center; }
+    .ganador-badge { background: #1A1A1A; color: #F5F0EA; border-radius: 16px; padding: 20px; margin-bottom: 14px; text-align: center; }
     .ganador-badge .emoji { font-size: 36px; }
     .ganador-badge h3 { font-size: 22px; font-weight: 700; margin: 6px 0 4px; }
-    .ganador-badge .total { font-size: 18px; font-weight: 700; margin-top: 6px; }
-    .ganador-badge .ahorro { font-size: 13px; opacity: 0.9; }
+    .ganador-badge .total { font-size: 18px; font-weight: 700; margin-top: 6px; color: #C9A96E; }
+    .ganador-badge .ahorro { font-size: 13px; opacity: 0.7; }
 
     .totales-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-    .total-card { background: white; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 2px solid transparent; }
-    .total-card.winner { border-color: #2ecc71; }
+    .total-card { background: white; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 2px solid transparent; }
+    .total-card.winner { border-color: #C9A96E; }
     .total-card .super-name { font-size: 13px; color: #888; margin-bottom: 4px; }
     .total-card .super-price { font-size: 22px; font-weight: 700; }
-    .total-card.winner .super-price { color: #2ecc71; }
-    .total-card .mas-caro { font-size: 11px; color: #f87171; margin-top: 3px; }
+    .total-card.winner .super-price { color: #C9A96E; }
+    .total-card .mas-caro { font-size: 11px; color: #e07070; margin-top: 3px; }
 
-    .producto-row { background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .producto-row { background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 1px solid #E8E2D9; }
     .producto-row h4 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
-    .precio-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; gap: 6px; }
+    .precio-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #F5F0EA; font-size: 14px; gap: 6px; }
     .precio-row:last-child { border-bottom: none; }
     .precio-row .super { color: #555; min-width: 90px; }
-    .precio-row .prod-name { flex: 1; font-size: 12px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .precio-row .prod-name { flex: 1; font-size: 12px; color: #bbb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .precio-row .precio { font-weight: 600; }
-    .precio-row.mejor .super { color: #2ecc71; font-weight: 700; }
-    .precio-row.mejor .precio { color: #2ecc71; }
-    .tag-mejor { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+    .precio-row.mejor .super { color: #C9A96E; font-weight: 700; }
+    .precio-row.mejor .precio { color: #C9A96E; }
+    .tag-mejor { background: #FAF0E0; color: #C9A96E; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
 
     /* Supermercados cercanos */
-    .cercanos-header { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-    .super-cercano { background: white; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .cercanos-header { font-size: 13px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .super-cercano { background: white; border-radius: 14px; padding: 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #E8E2D9; }
     .super-cercano-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .super-cercano-top .nombre { font-size: 16px; font-weight: 700; flex: 1; }
-    .dist-badge { background: #f0fdf4; color: #16a34a; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .dist-badge { background: #FAF0E0; color: #C9A96E; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
     .super-cercano-dir { font-size: 12px; color: #aaa; margin-bottom: 10px; }
     .super-cercano-tiempos { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    .tiempo-chip { background: #f5f5f5; border-radius: 20px; padding: 4px 10px; font-size: 12px; color: #555; }
-    .delivery-opciones { border-top: 1px solid #f5f5f5; padding-top: 10px; }
+    .tiempo-chip { background: #F5F0EA; border-radius: 20px; padding: 4px 10px; font-size: 12px; color: #555; }
+    .delivery-opciones { border-top: 1px solid #F5F0EA; padding-top: 10px; }
     .delivery-opciones h4 { font-size: 12px; color: #aaa; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
-    .delivery-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; gap: 8px; }
+    .delivery-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #FAF6F0; font-size: 14px; gap: 8px; }
     .delivery-row:last-child { border-bottom: none; }
     .delivery-row .plat-name { flex: 1; font-weight: 500; }
     .delivery-row .plat-tiempo { color: #888; font-size: 13px; }
-    .delivery-row .plat-tarifa { font-weight: 700; color: #1a1a1a; }
-    .delivery-row .plat-tarifa.gratis { color: #2ecc71; }
+    .delivery-row .plat-tarifa { font-weight: 700; color: #1A1A1A; }
+    .delivery-row .plat-tarifa.gratis { color: #C9A96E; }
     .delivery-row .plat-nota { font-size: 11px; color: #aaa; }
-    .ubicacion-btn { background: #eff6ff; color: #3b82f6; border: none; border-radius: 12px; padding: 12px; width: 100%; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+    .ubicacion-btn { background: #FAF0E0; color: #C9A96E; border: 1px solid #E8D9C4; border-radius: 12px; padding: 12px; width: 100%; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
     .ubicacion-btn:hover { background: #dbeafe; }
 
     .loading { text-align: center; padding: 28px; color: #888; }
-    .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #2ecc71; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid #E8E2D9; border-top-color: #C9A96E; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .screen { display: none; }
@@ -147,7 +153,7 @@
 <body>
 
 <header>
-  <span>🛒</span>
+  <span style="font-size:20px">📍</span>
   <h1>Foocation</h1>
   <span id="header-list-name" class="header-list-name" style="display:none"></span>
   <button class="lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
@@ -158,7 +164,7 @@
   <!-- HOME -->
   <div id="screen-home" class="screen active">
     <div class="hero">
-      <div class="emoji">🛒</div>
+      <div class="logo-pin">📍</div>
       <h2 data-i18n="heroTitle">Compara precios al instante</h2>
       <p data-i18n="heroSub">Crea una lista compartida y encuentra la canasta más barata.</p>
     </div>
@@ -183,15 +189,15 @@
     <div class="share-box">
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-size:16px">🔗</span>
-        <div id="codigo-lista" style="font-size:22px;font-weight:800;letter-spacing:4px;color:#16a34a;cursor:pointer;flex:1" onclick="copiarCodigo()" title="Click para copiar"></div>
-        <button id="copy-link-btn" onclick="copiarCodigo()" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer" data-i18n="copy">Copiar</button>
+        <div id="codigo-lista" style="font-size:22px;font-weight:800;letter-spacing:4px;color:#C9A96E;cursor:pointer;flex:1" onclick="copiarCodigo()" title="Click para copiar"></div>
+        <button id="copy-link-btn" onclick="copiarCodigo()" style="background:#1A1A1A;color:#F5F0EA;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer" data-i18n="copy">Copiar</button>
 
       </div>
       <div id="share-url-input-wrap" style="display:none;margin-top:10px">
         <input id="share-url-input" type="text" readonly style="width:100%;padding:8px 12px;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#555" />
       </div>
       <div style="margin-top:6px">
-        <button id="ver-link-btn" onclick="toggleLink()" style="background:none;border:none;color:#86efac;font-size:12px;cursor:pointer;padding:0" data-i18n="seeLink">ver link →</button>
+        <button id="ver-link-btn" onclick="toggleLink()" style="background:none;border:none;color:#C9A96E;font-size:12px;cursor:pointer;padding:0;opacity:0.7" data-i18n="seeLink">ver link →</button>
       </div>
     </div>
 
