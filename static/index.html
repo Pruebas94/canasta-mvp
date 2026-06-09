@@ -1232,10 +1232,8 @@
       const result = await res.json();
       renderResultados(result);
       // Guardar ahorro si hay usuario logueado
-      if (result.totales && Object.keys(result.totales).length > 1) {
-        const vals = Object.values(result.totales);
-        guardarAhorro(Math.min(...vals), Math.max(...vals), result.items);
-      }
+      // Guardar resultado para usar en "Complete purchase"
+      window._lastCompareResult = result;
     } catch(e) {
       alert('Error al comparar. Intenta de nuevo.');
     } finally {
@@ -1329,8 +1327,80 @@
     }).join('');
 
     document.getElementById('resultados').style.display = 'block';
+
+    // Botón complete purchase
+    const existing = document.getElementById('complete-purchase-btn');
+    if (existing) existing.remove();
+    const btn = document.createElement('button');
+    btn.id = 'complete-purchase-btn';
+    btn.style.cssText = 'width:100%;padding:16px;background:#C9A96E;color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px;letter-spacing:0.3px';
+    btn.innerHTML = '✓ I bought this — close list';
+    btn.onclick = completarCompra;
+    document.getElementById('resultados').after(btn);
+
     document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
   }
+
+  // ── Completar compra ──────────────────────────────────
+  window.completarCompra = async () => {
+    const result = window._lastCompareResult;
+    if (!result) return;
+
+    // Marcar todos los items como done en Firebase
+    if (listaId) {
+      const snap = await new Promise(resolve =>
+        onValue(ref(db, `listas/${listaId}/items`), resolve, { onlyOnce: true })
+      );
+      const data = snap.val();
+      if (data) {
+        for (const key of Object.keys(data)) {
+          await update(ref(db, `listas/${listaId}/items/${key}`), { done: true });
+        }
+      }
+    }
+
+    // Guardar en historial solo si hay usuario logueado
+    if (currentUser && result.totales) {
+      const vals = Object.values(result.totales);
+      const minTotal = Math.min(...vals);
+      const maxTotal = Math.max(...vals);
+      await guardarAhorro(minTotal, maxTotal, result.items);
+
+      // Actualizar stock de hábitos comprados
+      const itemsComprados = Object.keys(result.items);
+      const habitosSnap = await new Promise(resolve =>
+        onValue(ref(db, `users/${currentUser.uid}/habitos`), resolve, { onlyOnce: true })
+      );
+      const habitos = habitosSnap.val();
+      if (habitos) {
+        for (const [key, h] of Object.entries(habitos)) {
+          if (itemsComprados.some(i => i.toLowerCase().includes(h.producto.toLowerCase()))) {
+            await update(ref(db, `users/${currentUser.uid}/habitos/${key}`), {
+              ultimaCompra: Date.now()
+            });
+          }
+        }
+      }
+    }
+
+    // Feedback al usuario
+    const btn = document.getElementById('complete-purchase-btn');
+    if (btn) {
+      btn.innerHTML = '✓ Purchase recorded!';
+      btn.style.background = '#1A1A1A';
+      btn.disabled = true;
+    }
+
+    // Mostrar resumen
+    setTimeout(() => {
+      if (currentUser) {
+        if (confirm('Purchase saved! View your profile?')) {
+          mostrarScreen('screen-profile');
+          cargarPerfil();
+        }
+      }
+    }, 500);
+  };
 </script>
 </body>
 </html>
