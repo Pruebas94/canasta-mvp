@@ -1,0 +1,115 @@
+<svg viewBox="0 0 1200 1400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .bg-light { fill: #F5F1EA; }
+      .bg-dark { fill: #1A1A1A; }
+      .ink { fill: #1A1A1A; }
+      .ink-light { fill: #F5F1EA; }
+      .accent { fill: #B8935A; }
+      .divider { stroke: #1A1A1A; stroke-width: 1; }
+      .divider-light { stroke: #F5F1EA; stroke-width: 1; }
+      .label { font-family: Georgia, serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+      .wordmark { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; letter-spacing: -1px; }
+      .tagline { font-family: Georgia, serif; font-style: italic; letter-spacing: 1px; }
+      .meta { font-family: Georgia, serif; font-size: 10px; letter-spacing: 2px; }
+    </style>
+  </defs>
+
+  <!-- PRIMARY LOGO -->
+  <rect x="0" y="0" width="1200" height="500" class="bg-light"/>
+  <text x="60" y="50" class="label ink">PRIMARY LOGO</text>
+  <line x1="60" y1="65" x2="200" y2="65" class="divider"/>
+
+  <g transform="translate(600, 220)">
+    <g transform="translate(-260, -90)">
+      <path d="M 60 0 C 93 0, 120 27, 120 60 C 120 100, 60 170, 60 170 C 60 170, 0 100, 0 60 C 0 27, 27 0, 60 0 Z" 
+            fill="none" stroke="#1A1A1A" stroke-width="3"/>
+      <g transform="translate(40, 50)">
+        <rect x="0" y="0" width="5" height="60" class="ink"/>
+        <rect x="0" y="0" width="40" height="5" class="ink"/>
+        <rect x="0" y="26" width="28" height="5" class="ink"/>
+      </g>
+    </g>
+    <text x="-110" y="20" class="wordmark ink" font-size="100">Foocation</text>
+  </g>
+
+  <text x="600" y="320" text-anchor="middle" class="tagline ink" font-size="20">find anything, anywhere</text>
+  <line x1="500" y1="350" x2="700" y2="350" class="divider"/>
+  <circle cx="600" cy="350" r="3" class="accent"/>
+
+  <!-- BRAND MARK (DARK) -->
+  <rect x="0" y="500" width="600" height="450" class="bg-dark"/>
+  <text x="60" y="550" class="label ink-light">BRAND MARK</text>
+  <line x1="60" y1="565" x2="200" y2="565" class="divider-light"/>
+
+  <g transform="translate(300, 750)">
+    <path d="M 60 -90 C 93 -90, 120 -63, 120 -30 C 120 10, 60 80, 60 80 C 60 80, 0 10, 0 -30 C 0 -63, 27 -90, 60 -90 Z" 
+          fill="none" stroke="#F5F1EA" stroke-width="3"
+          transform="translate(-60, 0)"/>
+    <g transform="translate(-20, -50)">
+      <rect x="0" y="0" width="5" height="60" class="ink-light"/>
+      <rect x="0" y="0" width="40" height="5" class="ink-light"/>
+      <rect x="0" y="26" width="28" height="5" class="ink-light"/>
+    </g>
+  </g>
+  <text x="300" y="900" text-anchor="middle" class="meta ink-light">FOOCATION · EST. 2026</text>
+
+  <!-- MONOGRAM -->
+  <rect x="600" y="500" width="600" height="450" class="bg-light"/>
+  <text x="660" y="550" class="label ink">MONOGRAM</text>
+  <line x1="660" y1="565" x2="800" y2="565" class="divider"/>
+
+  <g transform="translate(900, 750)">
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#1A1A1A" stroke-width="2"/>
+    <circle cx="0" cy="0" r="92" fill="none" stroke="#B8935A" stroke-width="0.5"/>
+    <g transform="translate(-22, -38)">
+      <rect x="0" y="0" width="5" height="76" class="ink"/>
+      <rect x="0" y="0" width="44" height="5" class="ink"/>
+      <rect x="0" y="32" width="32" height="5" class="ink"/>
+    </g>
+    <circle cx="32" cy="42" r="4" class="accent"/>
+  </g>
+  <text x="900" y="900" text-anchor="middle" class="meta ink">F · FOOCATION</text>
+
+  <!-- COLOR PALETTE -->
+  <rect x="0" y="950" width="1200" height="200" class="bg-light"/>
+  <text x="60" y="1000" class="label ink">COLOR PALETTE</text>
+  <line x1="60" y1="1015" x2="200" y2="1015" class="divider"/>
+
+  <g transform="translate(60, 1040)">
+    <rect x="0" y="0" width="120" height="80" fill="#1A1A1A"/>
+    <text x="0" y="100" class="meta ink">INK</text>
+    <text x="0" y="118" class="meta ink" opacity="0.6">#1A1A1A</text>
+  </g>
+  <g transform="translate(220, 1040)">
+    <rect x="0" y="0" width="120" height="80" fill="#F5F1EA" stroke="#1A1A1A" stroke-width="0.5"/>
+    <text x="0" y="100" class="meta ink">BONE</text>
+    <text x="0" y="118" class="meta ink" opacity="0.6">#F5F1EA</text>
+  </g>
+  <g transform="translate(380, 1040)">
+    <rect x="0" y="0" width="120" height="80" fill="#B8935A"/>
+    <text x="0" y="100" class="meta ink">BRASS</text>
+    <text x="0" y="118" class="meta ink" opacity="0.6">#B8935A</text>
+  </g>
+  <g transform="translate(540, 1040)">
+    <rect x="0" y="0" width="120" height="80" fill="#3D3D3D"/>
+    <text x="0" y="100" class="meta ink">GRAPHITE</text>
+    <text x="0" y="118" class="meta ink" opacity="0.6">#3D3D3D</text>
+  </g>
+  <g transform="translate(740, 1040)">
+    <text x="0" y="20" class="wordmark ink" font-size="32">Aa</text>
+    <text x="0" y="50" class="meta ink">SERIF · GEORGIA / DIDOT</text>
+    <text x="0" y="68" class="meta ink" opacity="0.6">Headline + Wordmark</text>
+  </g>
+
+  <!-- APPLICATION -->
+  <rect x="0" y="1150" width="1200" height="250" class="bg-dark"/>
+  <text x="60" y="1200" class="label ink-light">APPLICATION</text>
+  <line x1="60" y1="1215" x2="200" y2="1215" class="divider-light"/>
+
+  <g transform="translate(600, 1290)">
+    <text x="0" y="0" text-anchor="middle" class="wordmark ink-light" font-size="56">Foocation</text>
+    <line x1="-100" y1="20" x2="100" y2="20" class="divider-light"/>
+    <text x="0" y="50" text-anchor="middle" class="tagline ink-light" font-size="14">find anything, anywhere</text>
+  </g>
+</svg>
