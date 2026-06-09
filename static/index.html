@@ -11,6 +11,8 @@
     header { background: #2ecc71; color: white; padding: 16px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     header h1 { font-size: 20px; font-weight: 700; flex: 1; }
     .header-list-name { font-size: 13px; opacity: 0.85; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lang-btn { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; cursor: pointer; }
+    .lang-btn:hover { background: rgba(255,255,255,0.35); }
 
     .container { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
 
@@ -107,6 +109,7 @@
   <span>🛒</span>
   <h1>Canasta</h1>
   <span id="header-list-name" class="header-list-name" style="display:none"></span>
+  <button class="lang-btn" onclick="toggleLang()" id="lang-btn">EN</button>
 </header>
 
 <div class="container">
@@ -137,15 +140,15 @@
   <!-- LISTA -->
   <div id="screen-lista" class="screen">
     <div class="share-box">
-      <p>🔗 Comparte esta lista — se actualiza en tiempo real</p>
+      <p id="share-box-title">🔗 Comparte esta lista — se actualiza en tiempo real</p>
       <div class="share-url">
         <input id="share-url-input" type="text" readonly />
-        <button onclick="copiarLink()">Copiar link</button>
+        <button id="copy-link-btn" onclick="copiarLink()">Copiar link</button>
       </div>
     </div>
 
     <div class="card">
-      <h2>Lista de compras</h2>
+      <h2 id="lista-card-title">Lista de compras</h2>
       <div class="input-group">
         <input id="input-producto" type="text" placeholder="ej: leche entera, pan, huevos..." />
         <button onclick="agregarItem()">+</button>
@@ -155,7 +158,7 @@
       </ul>
       <div class="sync-status">
         <span class="online-dot"></span>
-        <span>Sincronizado en tiempo real</span>
+        <span id="sync-label">Sincronizado en tiempo real</span>
       </div>
     </div>
 
@@ -167,7 +170,7 @@
     <div id="loading" style="display:none" class="card">
       <div class="loading">
         <div class="spinner"></div>
-        <p>Consultando Mercadona, DIA, Eroski y Ahorramas...</p>
+        <p id="loading-text">Consultando Mercadona, DIA, Eroski y Ahorramas...</p>
       </div>
     </div>
 
@@ -175,7 +178,7 @@
       <div id="ganador-container"></div>
       <div id="totales-container" class="totales-grid"></div>
       <div class="card">
-        <h2>Desglose por producto</h2>
+        <h2 id="breakdown-title">Desglose por producto</h2>
         <div id="desglose-container"></div>
       </div>
     </div>
@@ -188,6 +191,105 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, onValue, push, update, remove }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ── Traducciones ──────────────────────────────────────
+  const T = {
+    es: {
+      title: "Canasta — Comparador de Supermercados",
+      heroTitle: "Compara precios al instante",
+      heroSub: "Crea una lista compartida y encuentra la canasta más barata.",
+      yourName: "Tu nombre",
+      namePlaceholder: "ej: María, Nicolás...",
+      nameHint: "Para que tus compañeros sepan quién editó la lista",
+      createList: "+ Crear nueva lista",
+      openList: "Abrir lista existente",
+      listCode: "Código de lista",
+      codePlaceholder: "ej: a1b2c3d4",
+      shareTitle: "🔗 Comparte esta lista — se actualiza en tiempo real",
+      copyLink: "Copiar link",
+      copied: "✓ Copiado",
+      shoppingList: "Lista de compras",
+      productPlaceholder: "ej: leche entera, pan, huevos...",
+      synced: "Sincronizado en tiempo real",
+      compareBtn: "Comparar precios →",
+      backBtn: "← Volver",
+      loading: "Consultando Mercadona, DIA, Eroski y Ahorramas...",
+      breakdown: "Desglose por producto",
+      addedBy: "añadido por",
+      notFound: "No encontrado",
+      saves: "€ tu canasta completa",
+      saves2: "Ahorras",
+      saves3: "vs el más caro",
+      cheapest: "✓ más barato",
+      noUnticked: "No hay productos sin tachar en la lista.",
+      listNotFound: "Lista no encontrada.",
+      errorCompare: "Error al comparar. Intenta de nuevo.",
+    },
+    en: {
+      title: "Basket — Supermarket Price Comparator",
+      heroTitle: "Compare prices instantly",
+      heroSub: "Create a shared list and find the cheapest basket.",
+      yourName: "Your name",
+      namePlaceholder: "e.g. Maria, Nicolas...",
+      nameHint: "So your list mates know who edited it",
+      createList: "+ Create new list",
+      openList: "Open existing list",
+      listCode: "List code",
+      codePlaceholder: "e.g. a1b2c3d4",
+      shareTitle: "🔗 Share this list — updates in real time",
+      copyLink: "Copy link",
+      copied: "✓ Copied",
+      shoppingList: "Shopping list",
+      productPlaceholder: "e.g. whole milk, bread, eggs...",
+      synced: "Synced in real time",
+      compareBtn: "Compare prices →",
+      backBtn: "← Back",
+      loading: "Checking prices at Mercadona, DIA, Eroski and Ahorramas...",
+      breakdown: "Breakdown by product",
+      addedBy: "added by",
+      notFound: "Not found",
+      saves: "€ your full basket",
+      saves2: "You save",
+      saves3: "vs most expensive",
+      cheapest: "✓ cheapest",
+      noUnticked: "No unticked items in the list.",
+      listNotFound: "List not found.",
+      errorCompare: "Error comparing. Please try again.",
+    }
+  };
+
+  let lang = localStorage.getItem('canasta_lang') || 'es';
+
+  function applyLang() {
+    const t = T[lang];
+    document.title = t.title;
+    document.getElementById('lang-btn').textContent = lang === 'es' ? 'EN' : 'ES';
+    document.querySelector('.hero h2').textContent = t.heroTitle;
+    document.querySelector('.hero p').textContent = t.heroSub;
+    document.querySelectorAll('.card h2')[0].textContent = t.yourName;
+    document.getElementById('input-nombre').placeholder = t.namePlaceholder;
+    document.querySelector('.nick-hint').textContent = t.nameHint;
+    document.querySelectorAll('.btn-primary')[0].textContent = t.createList;
+    document.querySelectorAll('.btn-secondary')[0].textContent = t.openList;
+    // Lista screen
+    document.getElementById('share-box-title').textContent = t.shareTitle;
+    document.getElementById('copy-link-btn').textContent = t.copyLink;
+    document.getElementById('lista-card-title').textContent = t.shoppingList;
+    document.getElementById('input-producto').placeholder = t.productPlaceholder;
+    document.getElementById('sync-label').textContent = t.synced;
+    document.getElementById('btn-comparar').textContent = t.compareBtn;
+    document.querySelectorAll('.btn-secondary')[1].textContent = t.backBtn;
+    const loadingText = document.getElementById('loading-text');
+    if (loadingText) loadingText.textContent = t.loading;
+    const breakdownTitle = document.getElementById('breakdown-title');
+    if (breakdownTitle) breakdownTitle.textContent = t.breakdown;
+  }
+
+  window.toggleLang = () => {
+    lang = lang === 'es' ? 'en' : 'es';
+    localStorage.setItem('canasta_lang', lang);
+    applyLang();
+  };
 
   const firebaseConfig = {
     databaseURL: "https://canasta-mvp-default-rtdb.europe-west1.firebasedatabase.app"
@@ -219,6 +321,7 @@
 
   // ── Al cargar ─────────────────────────────────────────
   window.addEventListener('load', () => {
+    applyLang();
     const nombre = localStorage.getItem('canasta_nombre');
     if (nombre) document.getElementById('input-nombre').value = nombre;
     const params = new URLSearchParams(window.location.search);
@@ -281,7 +384,7 @@
     unsubscribe = onValue(listaRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) {
-        alert('Lista no encontrada.');
+        alert(T[lang].listNotFound);
         volverHome();
         return;
       }
@@ -315,7 +418,7 @@
         </button>
         <div class="item-info">
           <span class="item-name ${item.done ? 'done' : ''}">${item.nombre}</span>
-          <span class="item-meta">añadido por ${item.autor || 'anónimo'}</span>
+          <span class="item-meta">${T[lang].addedBy} ${item.autor || 'anónimo'}</span>
         </div>
         <button class="remove-btn" onclick="eliminarItem('${key}')">✕</button>
       </li>
@@ -379,7 +482,7 @@
       .map(i => i.nombre);
 
     if (items.length === 0) {
-      alert('No hay productos sin tachar en la lista.');
+      alert(T[lang].noUnticked);
       return;
     }
 
@@ -414,8 +517,8 @@
         <div class="ganador-badge">
           <div class="emoji">🏆</div>
           <h3>${mejor_canasta}</h3>
-          <div class="total">${totales[mejor_canasta].toFixed(2)}€ tu canasta completa</div>
-          ${ahorro > 0.01 ? `<div class="ahorro">Ahorras ${ahorro.toFixed(2)}€ vs el más caro</div>` : ''}
+          <div class="total">${totales[mejor_canasta].toFixed(2)}${T[lang].saves}</div>
+          ${ahorro > 0.01 ? `<div class="ahorro">${T[lang].saves2} ${ahorro.toFixed(2)}€ ${T[lang].saves3}</div>` : ''}
         </div>`;
     }
 
@@ -426,7 +529,7 @@
           <div class="super-name">${s}</div>
           <div class="super-price">${totales[s].toFixed(2)}€</div>
           ${diff > 0.01 ? `<div class="mas-caro">+${diff.toFixed(2)}€ más</div>` : ''}
-          ${s === mejor_canasta ? '<div style="font-size:11px;color:#2ecc71;margin-top:3px">✓ más barato</div>' : ''}
+          ${s === mejor_canasta ? `<div style="font-size:11px;color:#2ecc71;margin-top:3px">${T[lang].cheapest}</div>` : ''}
         </div>`;
     }).join('');
 
@@ -443,7 +546,7 @@
               <span class="precio">${p.price.toFixed(2)}€</span>
               ${s === mejor?.supermarket ? '<span class="tag-mejor">✓</span>' : ''}
             </div>`).join('')}
-          ${list.length === 0 ? '<p style="color:#bbb;font-size:13px;padding:4px 0">No encontrado</p>' : ''}
+          ${list.length === 0 ? `<p style="color:#bbb;font-size:13px;padding:4px 0">${T[lang].notFound}</p>` : ''}
         </div>`;
     }).join('');
 
