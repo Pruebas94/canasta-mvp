@@ -326,6 +326,7 @@
         </label>
       </div>
       <p style="font-size:13px;color:#888;margin-bottom:10px">Foocation learns your buying patterns automatically and reminds you when it's time to restock.</p>
+      <button onclick="resetSmartLearning()" style="background:none;border:1px solid #E8E2D9;color:#888;font-size:12px;cursor:pointer;padding:4px 12px;border-radius:8px;margin-bottom:10px">↻ Reset learning data</button>
       <div id="smart-patterns">
         <div style="color:#bbb;font-size:13px;text-align:center;padding:8px">Buy more to learn your patterns</div>
       </div>
@@ -922,6 +923,15 @@
 
     await set(ref(db, `users/${uid}/smartPatterns`), patterns);
   }
+
+  window.resetSmartLearning = async () => {
+    if (!currentUser) return;
+    if (!confirm('Reset all learning data? Your purchase history stays, but smart learning starts over.')) return;
+    const uid = currentUser.uid;
+    await remove(ref(db, `users/${uid}/smartLearning`));
+    await remove(ref(db, `users/${uid}/smartPatterns`));
+    cargarPerfil();
+  };
 
   window.toggleSmartLearning = async () => {
     if (!currentUser) return;
