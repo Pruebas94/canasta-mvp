@@ -49,11 +49,23 @@
     .items-list li .check-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #d1d5db; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
     .items-list li .check-btn.done { background: #2ecc71; border-color: #2ecc71; color: white; }
     .items-list li .item-info { flex: 1; }
-    .items-list li .item-name { display: block; transition: all 0.2s; }
+    .items-list li .item-name { display: block; transition: all 0.2s; font-weight: 500; }
     .items-list li .item-name.done { text-decoration: line-through; color: #aaa; }
     .items-list li .item-meta { font-size: 11px; color: #bbb; }
     .items-list li .remove-btn { background: none; border: none; color: #d1d5db; font-size: 18px; cursor: pointer; padding: 0 4px; }
     .items-list li .remove-btn:hover { color: #e74c3c; }
+    /* Cantidad */
+    .qty-control { display: flex; align-items: center; gap: 6px; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #e0e0e0; background: white; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #555; transition: all 0.15s; flex-shrink: 0; }
+    .qty-btn:hover { border-color: #2ecc71; color: #2ecc71; }
+    .qty-btn.minus:hover { border-color: #f87171; color: #f87171; }
+    .qty-num { font-size: 15px; font-weight: 700; min-width: 20px; text-align: center; color: #1a1a1a; }
+    /* Input con cantidad */
+    .add-item-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .add-item-row input { flex: 1; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+    .add-item-row input:focus { border-color: #2ecc71; }
+    .qty-input { width: 56px !important; flex: none !important; text-align: center; font-weight: 700; }
+    .add-item-row button.add-btn { background: #2ecc71; color: white; border: none; border-radius: 12px; padding: 12px 18px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
 
     .empty-msg { text-align: center; padding: 20px; color: #bbb; font-size: 14px; list-style: none; }
 
@@ -149,9 +161,10 @@
 
     <div class="card">
       <h2 id="lista-card-title">Lista de compras</h2>
-      <div class="input-group">
+      <div class="add-item-row">
         <input id="input-producto" type="text" placeholder="ej: leche entera, pan, huevos..." />
-        <button onclick="agregarItem()">+</button>
+        <input id="input-cantidad" class="qty-input" type="number" value="1" min="1" max="99" />
+        <button class="add-btn" onclick="agregarItem()">+</button>
       </div>
       <ul id="lista-items" class="items-list">
         <li class="empty-msg">Añade productos a tu lista</li>
@@ -420,6 +433,11 @@
           <span class="item-name ${item.done ? 'done' : ''}">${item.nombre}</span>
           <span class="item-meta">${T[lang].addedBy} ${item.autor || 'anónimo'}</span>
         </div>
+        <div class="qty-control">
+          <button class="qty-btn minus" onclick="cambiarCantidad('${key}', -1)">−</button>
+          <span class="qty-num">${item.cantidad || 1}</span>
+          <button class="qty-btn" onclick="cambiarCantidad('${key}', 1)">+</button>
+        </div>
         <button class="remove-btn" onclick="eliminarItem('${key}')">✕</button>
       </li>
     `).join('');
@@ -429,15 +447,29 @@
   // ── ITEMS ─────────────────────────────────────────────
   window.agregarItem = async () => {
     const val = document.getElementById('input-producto').value.trim();
+    const qty = parseInt(document.getElementById('input-cantidad').value) || 1;
     if (!val || !listaId) return;
     document.getElementById('input-producto').value = '';
+    document.getElementById('input-cantidad').value = '1';
     const itemsRef = ref(db, `listas/${listaId}/items`);
     await push(itemsRef, {
       nombre: val,
+      cantidad: qty,
       autor: miNombre,
       done: false,
       creadoEn: Date.now()
     });
+  };
+
+  window.cambiarCantidad = async (key, delta) => {
+    if (!listaId) return;
+    // Leer cantidad actual
+    const snap = await new Promise(resolve =>
+      onValue(ref(db, `listas/${listaId}/items/${key}`), resolve, { onlyOnce: true })
+    );
+    const item = snap.val();
+    const nuevaCantidad = Math.max(1, (item.cantidad || 1) + delta);
+    await update(ref(db, `listas/${listaId}/items/${key}`), { cantidad: nuevaCantidad });
   };
 
   window.toggleItem = async (key, done) => {
@@ -479,7 +511,7 @@
 
     const items = Object.values(data)
       .filter(i => !i.done)
-      .map(i => i.nombre);
+      .map(i => ({ nombre: i.nombre, cantidad: i.cantidad || 1 }));
 
     if (items.length === 0) {
       alert(T[lang].noUnticked);
@@ -494,7 +526,7 @@
       const res = await fetch('/comparar', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ items })
+        body: JSON.stringify({ items: items.map(i => i.nombre), cantidades: Object.fromEntries(items.map(i => [i.nombre, i.cantidad])) })
       });
       const result = await res.json();
       renderResultados(result);
@@ -536,14 +568,18 @@
     document.getElementById('desglose-container').innerHTML = Object.entries(itemsData).map(([item, d]) => {
       const list = Object.entries(d.supermercados).sort((a,b) => a[1].price - b[1].price);
       const mejor = d.mejor_precio;
+      const qty = d.cantidad || 1;
       return `
         <div class="producto-row">
-          <h4>🛒 ${item}</h4>
+          <h4>🛒 ${item} ${qty > 1 ? `<span style="font-size:13px;color:#2ecc71;font-weight:600">×${qty}</span>` : ''}</h4>
           ${list.map(([s, p]) => `
             <div class="precio-row ${s === mejor?.supermarket ? 'mejor' : ''}">
               <span class="super">${s}</span>
               <span class="prod-name">${p.name}</span>
-              <span class="precio">${p.price.toFixed(2)}€</span>
+              <span class="precio">
+                ${p.price.toFixed(2)}€
+                ${qty > 1 ? `<span style="font-size:11px;color:#aaa;font-weight:400"> (${p.precio_unitario?.toFixed(2)}€ c/u)</span>` : ''}
+              </span>
               ${s === mejor?.supermarket ? '<span class="tag-mejor">✓</span>' : ''}
             </div>`).join('')}
           ${list.length === 0 ? `<p style="color:#bbb;font-size:13px;padding:4px 0">${T[lang].notFound}</p>` : ''}

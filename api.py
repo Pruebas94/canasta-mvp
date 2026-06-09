@@ -34,6 +34,7 @@ Lista = Query()
 
 class SearchRequest(BaseModel):
     items: list[str]
+    cantidades: dict = {}
 
 class CrearListaRequest(BaseModel):
     nombre: str
@@ -112,15 +113,21 @@ async def comparar(request: SearchRequest):
         ]
         all_results = await asyncio.gather(*futures)
 
+        qty = request.cantidades.get(item, 1)
         por_super = {}
         for products in all_results:
             for p in products:
                 s = p["supermarket"]
                 if s not in por_super or p["price"] < por_super[s]["price"]:
-                    por_super[s] = p
+                    p_copy = dict(p)
+                    p_copy["precio_unitario"] = p["price"]
+                    p_copy["cantidad"] = qty
+                    p_copy["price"] = round(p["price"] * qty, 2)
+                    por_super[s] = p_copy
 
         resultado[item] = {
             "supermercados": por_super,
+            "cantidad": qty,
             "mejor_precio": min(por_super.values(), key=lambda x: x["price"]) if por_super else None,
         }
 
